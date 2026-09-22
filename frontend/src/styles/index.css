@@ -3,3 +3,7 @@
 @import './tokens.css';
 @import './base.css';
 @import './components.css';
+@import './investigator.css';
+/* Last: lifts contrast on classes that were carrying real content in a grey
+   light enough to read as disabled. */
+@import './readability.css';

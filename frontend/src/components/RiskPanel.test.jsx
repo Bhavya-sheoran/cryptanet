@@ -10,11 +10,12 @@ import RiskPanel from './RiskPanel.jsx';
  * number with no factors beside it cannot be justified.
  */
 describe('RiskPanel', () => {
-  it('shows the score and its band', () => {
+  it('leads with the risk level, and keeps the score as supporting detail', () => {
     render(<RiskPanel label="high" score={81.4} factors={['3 reported case(s)']} />);
 
+    // The word is what an officer acts on; the number explains it.
     expect(screen.getByText('81.4')).toBeInTheDocument();
-    expect(screen.getByText(/high fraud linkage/i)).toBeInTheDocument();
+    expect(screen.getByText(/high risk/i)).toBeInTheDocument();
   });
 
   it('lists every contributing factor', () => {
@@ -62,11 +63,13 @@ describe('RiskPanel', () => {
 
   it('names the half-life when one is configured', () => {
     render(<RiskPanel label="low" score={10} factors={[]} halfLifeDays={90} />);
-    expect(screen.getByText(/90-day half-life/)).toBeInTheDocument();
+    expect(screen.getByText(/halving after 90 days/)).toBeInTheDocument();
   });
 
-  it('still explains the decay when no half-life is given', () => {
+  it('still explains that age reduces weight when no half-life is given', () => {
     render(<RiskPanel label="low" score={10} factors={[]} />);
-    expect(screen.getByText(/with time decay/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Recent complaints count for more than old ones/),
+    ).toBeInTheDocument();
   });
 });

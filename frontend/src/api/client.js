@@ -37,8 +37,14 @@ function authHeaders(extra) {
 /** A trace walks up to eight hops and, in live mode, retries throttled indexer
  *  calls, so it is legitimately slow. This is a ceiling on hanging, not a
  *  performance target: without it a stalled backend leaves the dashboard
- *  spinning with nothing to click and nothing to read. */
-const REQUEST_TIMEOUT_MS = 60_000;
+ *  spinning with nothing to click and nothing to read.
+ *
+ *  Filing a complaint traces the chain and is the one call that can approach
+ *  this; everything else answers from the graph in under a couple of seconds.
+ *  Set above the backend's own trace ceiling on purpose - aborting here while
+ *  the backend is still working wastes the upstream calls already spent and
+ *  tells the officer nothing about whether the trace succeeded. */
+const REQUEST_TIMEOUT_MS = 120_000;
 
 /** Read the error message out of a response body, whatever shape it is in. */
 async function errorDetail(res, fallback) {
@@ -211,8 +217,42 @@ export function generateReport(caseId) {
   return apiPost(`/api/v1/cases/${caseId}/report`, {});
 }
 
-export function reportDownloadUrl(caseId, reportId) {
-  return `${API_BASE}/api/v1/cases/${caseId}/report/${reportId}/download`;
+/**
+ * Download a generated report as a real file.
+ *
+ * This used to be a plain URL dropped into an `<a href target="_blank">`. A
+ * link navigation carries no Authorization header, so the endpoint - which
+ * requires a signed-in officer - answered 401, and the browser rendered the
+ * JSON body in a new tab. That is the "Pretty Print / detail: Not
+ * authenticated" screen: not a broken report, a request that never carried a
+ * token.
+ *
+ * Fetching it with the header and saving the bytes as a blob downloads the
+ * actual PDF.
+ */
+export async function downloadReport(caseId, reportId, filename) {
+  const res = await fetch(
+    `${API_BASE}/api/v1/cases/${caseId}/report/${reportId}/download`,
+    { headers: authHeaders() },
+  );
+  if (!res.ok) {
+    throw new Error(await errorDetail(res, `Could not download the report (${res.status}).`));
+  }
+  await saveBlob(await res.blob(), filename || `case-report-${reportId}.pdf`);
+}
+
+/** Hand a blob to the browser as a download, then release the object URL. */
+async function saveBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // Revoked on the next tick: revoking synchronously can cancel the download
+  // in some browsers before it has started reading.
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
 
 export function verifyReport(caseId, reportId) {

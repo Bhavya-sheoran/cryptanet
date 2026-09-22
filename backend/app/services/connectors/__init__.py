@@ -21,6 +21,7 @@ from app.services.connectors.base import (
 )
 from app.services.connectors.live import (
     BlockchairConnector,
+    EsploraConnector,
     EtherscanConnector,
     TronGridConnector,
 )
@@ -28,10 +29,19 @@ from app.services.connectors.synthetic import SyntheticConnector
 
 logger = logging.getLogger(__name__)
 
+# Bitcoin defaults to Esplora because it needs no API key. Blockchair is used
+# instead only when a key is actually configured - its free tier is too small
+# to trace with, so treating it as the default left BTC with no live source.
+def _btc_connector() -> BlockchainConnector:
+    if get_settings().blockchair_api_key:
+        return BlockchairConnector()
+    return EsploraConnector()
+
+
 _LIVE = {
     CHAIN_ETH: EtherscanConnector,
     CHAIN_TRON: TronGridConnector,
-    CHAIN_BTC: BlockchairConnector,
+    CHAIN_BTC: _btc_connector,
 }
 
 
@@ -60,6 +70,7 @@ __all__ = [
     "BlockchairConnector",
     "ChainTransaction",
     "ConnectorError",
+    "EsploraConnector",
     "EtherscanConnector",
     "SyntheticConnector",
     "TronGridConnector",

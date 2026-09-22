@@ -20,6 +20,8 @@ import logging
 from collections.abc import Iterable
 from decimal import Decimal
 
+from neo4j.exceptions import Neo4jError
+
 from app.db.neo4j import get_driver
 from app.services.connectors.base import SOURCE_UNKNOWN, ChainTransaction
 
@@ -368,15 +370,66 @@ def clear_test_data() -> None:
     entities use an `entity_id` prefixed "test-" and are removed first, so the
     addresses they tagged get swept too.
     """
-    statements = [
-        "MATCH (e:Entity) WHERE e.entity_id STARTS WITH 'test-' DETACH DELETE e",
-        "MATCH (t:Transaction) DETACH DELETE t",
-        "MATCH (c:Cluster) DETACH DELETE c",
-        "MATCH (k:Case) DETACH DELETE k",
-        "MATCH (a:Address) WHERE NOT (a)-[:TAGGED_AS]->() DETACH DELETE a",
+    # (batched match, batched delete, single-transaction equivalent)
+    sweeps = [
+        (
+            "MATCH (e:Entity) WHERE e.entity_id STARTS WITH 'test-' RETURN e AS n",
+            "DETACH DELETE n",
+            "MATCH (e:Entity) WHERE e.entity_id STARTS WITH 'test-' DETACH DELETE e",
+        ),
+        (
+            "MATCH (t:Transaction) RETURN t AS n",
+            "DETACH DELETE n",
+            "MATCH (t:Transaction) DETACH DELETE t",
+        ),
+        ("MATCH (c:Cluster) RETURN c AS n", "DETACH DELETE n", "MATCH (c:Cluster) DETACH DELETE c"),
+        ("MATCH (k:Case) RETURN k AS n", "DETACH DELETE n", "MATCH (k:Case) DETACH DELETE k"),
+        (
+            "MATCH (a:Address) WHERE NOT (a)-[:TAGGED_AS]->() RETURN a AS n",
+            "DETACH DELETE n",
+            "MATCH (a:Address) WHERE NOT (a)-[:TAGGED_AS]->() DETACH DELETE a",
+        ),
         # Seeded addresses survive above; drop any graph edges left on them.
-        "MATCH (:Address)-[r:TRANSFERRED|SAME_OWNER|MEMBER_OF]-() DELETE r",
+        (
+            "MATCH (:Address)-[r:TRANSFERRED|SAME_OWNER|MEMBER_OF]-() RETURN r AS n",
+            "DELETE n",
+            "MATCH (:Address)-[r:TRANSFERRED|SAME_OWNER|MEMBER_OF]-() DELETE r",
+        ),
     ]
     with get_driver().session() as session:
-        for stmt in statements:
-            session.run(stmt).consume()
+        for match, delete, fallback in sweeps:
+            _delete_in_batches(session, match, delete, fallback)
+
+
+#: Nodes or relationships deleted per transaction. Small enough that a batch
+#: cannot exhaust Neo4j's transaction memory pool, large enough that clearing
+#: a sizeable graph does not take thousands of round trips.
+DELETE_BATCH_SIZE = 5_000
+
+
+def _delete_in_batches(session, match: str, delete: str, fallback: str) -> None:
+    """Delete everything `match` returns as `n`, committing a batch at a time.
+
+    A single `MATCH (t:Transaction) DETACH DELETE t` holds every affected node
+    and relationship in one transaction. That is fine on a synthetic dataset of
+    a few hundred nodes and fails on a real one: against a live-traced graph of
+    ~56k addresses it exceeded Neo4j's transaction memory pool
+    (MemoryPoolOutOfMemoryError) and took 56 tests down with it.
+
+    apoc.periodic.iterate commits per batch, so peak memory is bounded by the
+    batch size rather than by the size of the graph. APOC ships in the compose
+    image; `fallback` is the plain single-transaction statement, used only if
+    it is ever absent - correct, and adequate for a small graph.
+    """
+    try:
+        session.run(
+            "CALL apoc.periodic.iterate($match, $delete, {batchSize: $size})",
+            match=match,
+            delete=delete,
+            size=DELETE_BATCH_SIZE,
+        ).consume()
+    except Neo4jError as exc:
+        if "apoc.periodic.iterate" not in str(exc):
+            raise
+        logger.warning("APOC unavailable; clearing in a single transaction instead")
+        session.run(fallback).consume()

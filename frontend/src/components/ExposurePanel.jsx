@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import AddressChip from './ui/AddressChip.jsx';
+import SankeyTrace from './SankeyTrace.jsx';
 import { Badge, EmptyState, Skeleton, TimeAgo } from './ui/Bits.jsx';
+import { activityPattern, countOf, formatDuration, formatINR } from './ui/format.js';
 import { fetchExposure } from '../api/client.js';
 
 const SERVICE_TONE = {
@@ -13,93 +15,196 @@ const SERVICE_TONE = {
   payment_processor: 'neutral',
 };
 
-/** Rupees, in the grouping an Indian investigator reads without counting digits. */
-function inr(value) {
-  if (value == null) return null;
-  return `₹${Number(value).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
-}
+/**
+ * Where the money ended up.
+ *
+ * Written for an investigating officer with no blockchain background, so the
+ * six weighted features behind the ranking are shown as what they measure -
+ * an amount in rupees, a number of hops, a time since the last movement -
+ * rather than as the normalised contributions the scorer works in. A figure
+ * like 0.1981 is meaningless to the person who has to act on it.
+ *
+ * The arithmetic is not hidden: it moves into "How this was ranked", which is
+ * collapsed by default. An officer must still be able to justify the ordering
+ * in a case file, so the numbers stay available - they just stop being the
+ * first thing anyone has to interpret.
+ */
 
-function FeatureBars({ explanation, score }) {
-  if (!explanation?.length) return null;
-  const max = Math.max(...explanation.map((e) => e.contribution), 0.0001);
-
+/** One plain-language fact about the destination. */
+function Fact({ label, value, detail, tone }) {
   return (
-    <div className="factors">
-      <div className="row-between">
-        <h4>Why this ranks here</h4>
-        <span className="tiny subtle">
-          contributions sum to {Number(score).toFixed(4)}
-        </span>
-      </div>
-      {explanation.map((e) => (
-        <div className="factor" key={e.feature}>
-          <span className="factor-name">{e.feature}</span>
-          <span className="factor-track">
-            <span
-              className="factor-fill"
-              style={{ width: `${Math.max((e.contribution / max) * 100, 1.5)}%` }}
-            />
-          </span>
-          <span className="factor-value mono">{e.contribution.toFixed(4)}</span>
-          <span className="factor-raw tiny subtle">
-            {e.feature === 'volume' && typeof e.raw === 'number'
-              ? inr(e.raw)
-              : e.feature === 'recency' && typeof e.raw === 'number'
-                ? `${Math.round(e.raw / 3600)}h ago`
-                : String(e.raw)}
-          </span>
-        </div>
-      ))}
+    <div className={`fact${tone ? ` fact-${tone}` : ''}`}>
+      <div className="fact-label">{label}</div>
+      <div className="fact-value">{value}</div>
+      {detail ? <div className="fact-detail">{detail}</div> : null}
     </div>
   );
 }
-FeatureBars.propTypes = { explanation: PropTypes.array, score: PropTypes.number };
-FeatureBars.defaultProps = { explanation: [], score: 0 };
+Fact.propTypes = {
+  label: PropTypes.string.isRequired,
+  value: PropTypes.node.isRequired,
+  detail: PropTypes.node,
+  tone: PropTypes.string,
+};
+Fact.defaultProps = { detail: null, tone: null };
+
+/** The five facts an officer needs, derived from the scorer's own inputs. */
+function FactGrid({ features }) {
+  const pattern = activityPattern(features);
+  const amount = formatINR(features.total_volume_inr);
+  const lastSeen = formatDuration(features.seconds_since_last, { suffix: 'ago' });
+
+  return (
+    <div className="fact-grid">
+      <Fact
+        label="Amount"
+        value={amount || `${Number(features.total_volume || 0).toFixed(4)} ${features.asset || ''}`}
+        detail={amount ? 'Estimated from public exchange rates.' : 'No rupee rate available for this asset.'}
+      />
+      <Fact
+        label="Number of hops"
+        value={features.hop}
+        detail={`The money changed wallets ${countOf(features.hop, 'time')} before arriving here.`}
+      />
+      <Fact
+        label="Last activity"
+        value={lastSeen || '—'}
+        detail={features.last_seen ? <>Latest transfer <TimeAgo iso={features.last_seen} /></> : null}
+      />
+      <Fact
+        label="Transaction frequency"
+        value={countOf(features.transfer_count, 'transfer')}
+        detail={`From ${countOf(features.unique_counterparties, 'sending wallet')}.`}
+      />
+      <Fact
+        label="Activity pattern"
+        value={pattern.label}
+        detail={pattern.detail}
+        tone={pattern.tone === 'warn' ? 'warn' : null}
+      />
+    </div>
+  );
+}
+FactGrid.propTypes = { features: PropTypes.object.isRequired };
+
+/** The route the money took, address by address.
+ *
+ *  The typical gap between hops is shown because it is what distinguishes
+ *  money moved by a person from money moved by a script - minutes between
+ *  hops is automation, days is someone deciding. It comes from the scorer's
+ *  own `median_inter_hop_seconds`; when the backend does not supply it the
+ *  line is omitted rather than guessed at.
+ */
+function Route({ path, medianHopSeconds, onSelectAddress }) {
+  if (!path?.length) return null;
+  const gap = formatDuration(medianHopSeconds);
+  return (
+    <div className="route-block">
+      <h4>Shortest route to this destination</h4>
+      <p className="route-lede">
+        Each step is a wallet the money passed through, in order.
+        {gap ? ` Typically ${gap} passed between one hop and the next.` : ''}
+      </p>
+      <ol className="route-list">
+        {path.map((addr, i) => (
+          <li className="route-item" key={`${addr}-${i}`}>
+            <span className="route-step-n">
+              {i === 0 ? 'Reported wallet' : i === path.length - 1 ? 'Destination' : `Hop ${i}`}
+            </span>
+            <AddressChip address={addr} onSelect={onSelectAddress} head={10} tail={8} />
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+Route.propTypes = {
+  path: PropTypes.array,
+  medianHopSeconds: PropTypes.number,
+  onSelectAddress: PropTypes.func,
+};
+Route.defaultProps = { path: [], medianHopSeconds: null, onSelectAddress: undefined };
 
 /**
- * Direct exposure. One hop, one transaction, and the strongest evidence the
- * system can produce - so it gets its own treatment rather than being ranked
- * against nothing.
+ * The ranking arithmetic, collapsed.
+ *
+ * Kept because an officer has to be able to explain in a case file why one
+ * destination ranked above another. Collapsed because it is not what they read
+ * first.
  */
+function RankingDetail({ explanation, score }) {
+  if (!explanation?.length) return null;
+
+  const NAMES = {
+    volume: 'Amount received',
+    hop: 'Distance from the reported wallet',
+    recency: 'How recently money moved',
+    frequency: 'Number of transfers',
+    continuity: 'Timing consistency',
+    label: 'Quality of the identification',
+  };
+
+  return (
+    <details className="ranking-detail">
+      <summary>How this was ranked</summary>
+      <p className="ranking-lede">
+        Six factors are weighed to order the destinations. The numbers below are the internal
+        weighting used by the system, shown so the ranking can be explained in a case file.
+      </p>
+      <table className="table ranking-table">
+        <thead>
+          <tr><th>Factor</th><th className="num">Weighting</th></tr>
+        </thead>
+        <tbody>
+          {explanation.map((e) => (
+            <tr key={e.feature}>
+              <td>{NAMES[e.feature] || e.feature}</td>
+              <td className="num mono">{e.contribution.toFixed(4)}</td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr><td>Total ranking score</td><td className="num mono">{Number(score).toFixed(4)}</td></tr>
+        </tfoot>
+      </table>
+    </details>
+  );
+}
+RankingDetail.propTypes = { explanation: PropTypes.array, score: PropTypes.number };
+RankingDetail.defaultProps = { explanation: [], score: 0 };
+
+/** The wallet paid a service directly. One transaction, strongest evidence. */
 function DirectExposure({ top, onSelectAddress }) {
   const ev = top.evidence || {};
   return (
-    <div className="exposure-hero">
-      <div className="row wrap">
-        <Badge tone="danger" uppercase>Direct exposure</Badge>
-        <Badge tone={SERVICE_TONE[top.service_type] || 'neutral'}>{top.service_type}</Badge>
-        <span className="tiny subtle">hop {top.hop} — the wallet paid this service itself</span>
+    <div className="destination is-direct">
+      <div className="destination-head">
+        <div>
+          <Badge tone="danger" uppercase>Paid directly</Badge>
+          <h2 className="destination-name">{top.service}</h2>
+          {top.service_type ? (
+            <Badge tone={SERVICE_TONE[top.service_type] || 'neutral'}>
+              {top.service_type.replace('_', ' ')}
+            </Badge>
+          ) : null}
+        </div>
       </div>
 
-      <h2 className="exposure-name">{top.service}</h2>
+      <div className="fact-grid">
+        <Fact label="Amount" value={`${ev.amount} ${ev.asset}`} />
+        <Fact label="Number of hops" value={top.hop} detail="Paid straight to this service." />
+        <Fact label="When" value={<TimeAgo iso={ev.timestamp} />} />
+      </div>
 
       <dl className="kv">
-        <dt>Amount</dt>
-        <dd className="mono">
-          {ev.amount} {ev.asset}
-          {ev.transfer_type === 'token' ? <span className="tiny subtle"> · token transfer</span> : null}
-        </dd>
-        {ev.token_contract ? (
-          <>
-            <dt>Token contract</dt>
-            <dd><AddressChip address={ev.token_contract} /></dd>
-          </>
-        ) : null}
-        <dt>Transaction</dt>
+        <dt>Transaction reference</dt>
         <dd><AddressChip address={ev.txid} head={14} tail={8} /></dd>
-        <dt>When</dt>
-        <dd><TimeAgo iso={ev.timestamp} /></dd>
         <dt>Paid to</dt>
         <dd><AddressChip address={ev.to_address} onSelect={onSelectAddress} /></dd>
-        <dt>Label source</dt>
-        <dd>
-          <span className="mono sm">{top.label?.source}</span>
-          <span className="tiny subtle"> · confidence {Number(top.label?.confidence).toFixed(2)}</span>
-        </dd>
       </dl>
 
-      <p className="hint">
-        This transaction is independently checkable on a block explorer. It is the
+      <p className="callout-inline">
+        This transaction can be checked independently on any public block explorer. It is the
         line that goes in the case file.
       </p>
     </div>
@@ -108,86 +213,55 @@ function DirectExposure({ top, onSelectAddress }) {
 DirectExposure.propTypes = { top: PropTypes.object.isRequired, onSelectAddress: PropTypes.func };
 DirectExposure.defaultProps = { onSelectAddress: undefined };
 
-function Candidate({ candidate, expanded, onToggle, onSelectAddress }) {
+/** One ranked destination. */
+function Destination({ candidate, expanded, onToggle, onSelectAddress }) {
   const f = candidate.features || {};
   const tone = SERVICE_TONE[f.service_type] || 'neutral';
+  const amount = formatINR(f.total_volume_inr);
 
   return (
-    <div className={`candidate${candidate.rank === 1 ? ' is-top' : ''}`}>
-      <button type="button" className="candidate-head" onClick={onToggle}>
-        <span className="candidate-rank">{candidate.rank}</span>
+    <div className={`destination${candidate.rank === 1 ? ' is-top' : ''}`}>
+      <button type="button" className="destination-head" onClick={onToggle} aria-expanded={expanded}>
+        <span className="destination-rank">{candidate.rank}</span>
         <span className="grow">
-          <span className="row wrap">
+          <span className="destination-title">
             <strong>{f.service}</strong>
-            <Badge tone={tone}>{f.service_type}</Badge>
-            <span className="tiny subtle">hop {f.hop}</span>
+            <Badge tone={tone}>{(f.service_type || '').replace('_', ' ')}</Badge>
           </span>
-          <span className="row wrap tiny subtle" style={{ marginTop: 2 }}>
-            {f.total_volume_inr != null ? (
-              <span><strong className="mono">{inr(f.total_volume_inr)}</strong> reached this service</span>
-            ) : (
-              <span>{Number(f.total_volume).toFixed(4)} {f.asset} (not priceable)</span>
-            )}
-            <span>· {f.transfer_count} transfer{f.transfer_count === 1 ? '' : 's'}</span>
-            <span>· {f.unique_counterparties} counterpart{f.unique_counterparties === 1 ? 'y' : 'ies'}</span>
-            {f.last_seen ? <span>· last <TimeAgo iso={f.last_seen} /></span> : null}
-            {f.continuity_ok === false ? (
-              <span className="warn-text">· path runs backwards in time</span>
-            ) : null}
+          <span className="destination-summary">
+            {amount ? <strong>{amount}</strong> : `${Number(f.total_volume || 0).toFixed(4)} ${f.asset || ''}`}
+            {' reached this destination after '}
+            {countOf(f.hop, 'hop')}
           </span>
         </span>
-        <span className="candidate-score mono">{Number(candidate.score).toFixed(3)}</span>
-        <span className="candidate-caret" aria-hidden="true">{expanded ? '▾' : '▸'}</span>
+        <span className="destination-caret" aria-hidden="true">{expanded ? '▾' : '▸'}</span>
       </button>
 
       {expanded ? (
-        <div className="candidate-body">
-          <FeatureBars explanation={candidate.explanation} score={candidate.score} />
-
-          {f.shortest_path?.length ? (
-            <>
-              <h4>Shortest route</h4>
-              <div className="route">
-                {f.shortest_path.map((addr, i) => (
-                  <span className="route-step" key={`${addr}-${i}`}>
-                    <AddressChip address={addr} onSelect={onSelectAddress} head={8} tail={5} />
-                    {i < f.shortest_path.length - 1 ? (
-                      <span className="route-arrow" aria-hidden="true">→</span>
-                    ) : null}
-                  </span>
-                ))}
-              </div>
-            </>
-          ) : null}
-
-          <div className="row wrap tiny subtle" style={{ marginTop: 'var(--sp-3)' }}>
-            <span>label: {(f.label_sources || []).join(', ') || 'unknown'}</span>
-            <span>· confidence {Number(f.label_confidence).toFixed(2)}</span>
-            {f.price_sources?.length ? <span>· priced via {f.price_sources.join(', ')}</span> : null}
-            <span>· basis {f.volume_basis}</span>
-          </div>
+        <div className="destination-body">
+          <FactGrid features={f} />
+          <Route
+            path={f.shortest_path}
+            medianHopSeconds={f.median_inter_hop_seconds}
+            onSelectAddress={onSelectAddress}
+          />
+          <RankingDetail explanation={candidate.explanation} score={candidate.score} />
         </div>
       ) : null}
     </div>
   );
 }
-Candidate.propTypes = {
+Destination.propTypes = {
   candidate: PropTypes.object.isRequired,
   expanded: PropTypes.bool,
   onToggle: PropTypes.func,
   onSelectAddress: PropTypes.func,
 };
-Candidate.defaultProps = { expanded: false, onToggle: undefined, onSelectAddress: undefined };
+Destination.defaultProps = { expanded: false, onToggle: undefined, onSelectAddress: undefined };
 
-/**
- * Service exposure: the answer to "where did the money end up".
- *
- * Direct exposure is presented differently from a ranked list on purpose. When
- * the wallet paid a service itself there is nothing to rank and the evidence is
- * a single transaction; when it did not, the honest answer is several
- * candidates with the arithmetic that ordered them.
- */
-export default function ExposurePanel({ address, maxHops, onSelectAddress }) {
+export default function ExposurePanel({
+  address, maxHops, onSelectAddress, tracePath, theme, selectedAddress,
+}) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -232,14 +306,60 @@ export default function ExposurePanel({ address, maxHops, onSelectAddress }) {
 
   if (!data) return null;
 
+  // The money-flow diagram lives here rather than in its own tab: the graph is
+  // the picture of the route the facts above describe, and separating them made
+  // an investigator read the answer in one place and check it in another.
+  // Drawn the way the original Money flow tab drew it: a counts toolbar with
+  // pinning, then the diagram edge to edge across the panel. Investigators
+  // were used to reading it at that size, and the narrower inset version made
+  // long traces cramped.
+  const flow = tracePath ? (
+    <div className="flow-block">
+      <h3>Money flow</h3>
+      <div className="flow-frame">
+        <div className="flow-toolbar">
+          <span className="sm muted">
+            {tracePath.node_count} addresses · {tracePath.link_count} transfers · depth{' '}
+            {tracePath.depth}
+          </span>
+          <span className="grow" />
+          {selectedAddress ? (
+            <span className="row sm">
+              <span className="muted">Pinned</span>
+              <AddressChip address={selectedAddress} />
+              {onSelectAddress ? (
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => onSelectAddress(null)}
+                >
+                  Clear
+                </button>
+              ) : null}
+            </span>
+          ) : (
+            <span className="tiny subtle">Click a node to pin it</span>
+          )}
+        </div>
+        <SankeyTrace
+          tracePath={tracePath}
+          onSelectAddress={onSelectAddress}
+          selectedAddress={selectedAddress}
+          theme={theme}
+        />
+      </div>
+    </div>
+  ) : null;
+
   if (data.kind === 'none') {
     return (
-      <div className="panel-body">
-        <EmptyState glyph="⊘" title="No service exposure found">
-          Nothing reached a labelled exchange, mixer or other service within {data.searched_to_hop}{' '}
-          hops. That is a finding, not a failure — the funds may still be sitting in
-          unattributed wallets.
+      <div className="panel-body stack" style={{ gap: 'var(--sp-5)' }}>
+        <EmptyState glyph="⊘" title="The money has not reached a known service yet">
+          Nothing reached an identified exchange, mixer or other service within{' '}
+          {countOf(data.searched_to_hop, 'hop')}. That is a finding in itself — the funds may
+          still be sitting in wallets that belong to no identified business.
         </EmptyState>
+        {flow}
       </div>
     );
   }
@@ -250,17 +370,14 @@ export default function ExposurePanel({ address, maxHops, onSelectAddress }) {
         <DirectExposure top={data.top} onSelectAddress={onSelectAddress} />
       ) : (
         <>
-          <div className="callout callout-info">
-            <span className="glyph" aria-hidden="true">ⓘ</span>
-            <div className="sm">
-              No direct payment to a known service, so the funds were traced onward.
-              {' '}{data.explanation}
-            </div>
-          </div>
+          <p className="section-lede">
+            The reported wallet did not pay a known service directly, so the money was followed
+            onward. These are the destinations it reached, most significant first.
+          </p>
 
-          <div className="candidates">
+          <div className="destinations">
             {data.candidates.map((c) => (
-              <Candidate
+              <Destination
                 key={`${c.features?.service}-${c.rank}`}
                 candidate={c}
                 expanded={openRank === c.rank}
@@ -272,10 +389,11 @@ export default function ExposurePanel({ address, maxHops, onSelectAddress }) {
         </>
       )}
 
-      <p className="hint">
-        Searched to {data.searched_to_hop} hops · scoring {data.scoring_version} ·{' '}
-        {data.data_provenance === 'synthetic' ? 'synthetic demonstration data' : 'live indexer data'}.
-        {' '}Rupee values are estimates from public price data, not exchange records.
+      {flow}
+
+      <p className="panel-note">
+        Searched up to {countOf(data.searched_to_hop, 'hop')}. Rupee amounts are estimates from
+        public exchange rates, not exchange records.
       </p>
     </div>
   );
@@ -285,5 +403,15 @@ ExposurePanel.propTypes = {
   address: PropTypes.string,
   maxHops: PropTypes.number,
   onSelectAddress: PropTypes.func,
+  tracePath: PropTypes.object,
+  theme: PropTypes.string,
+  selectedAddress: PropTypes.string,
 };
-ExposurePanel.defaultProps = { address: null, maxHops: 8, onSelectAddress: undefined };
+ExposurePanel.defaultProps = {
+  address: null,
+  maxHops: 8,
+  onSelectAddress: undefined,
+  tracePath: null,
+  theme: 'light',
+  selectedAddress: null,
+};

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import WalletInputForm from '../components/WalletInputForm.jsx';
-import SankeyTrace from '../components/SankeyTrace.jsx';
 import ExposurePanel from '../components/ExposurePanel.jsx';
 import RiskPanel from '../components/RiskPanel.jsx';
 import ContributingCases from '../components/ContributingCases.jsx';
@@ -10,6 +9,7 @@ import CaseWorkspace from '../components/CaseWorkspace.jsx';
 import Tabs from '../components/ui/Tabs.jsx';
 import AddressChip from '../components/ui/AddressChip.jsx';
 import { Callout, EmptyState, RiskBadge, Skeleton, Stat } from '../components/ui/Bits.jsx';
+import { countOf } from '../components/ui/format.js';
 import useTheme from '../components/ui/useTheme.js';
 import { useToast } from '../components/ui/toast-context.js';
 import { analyseWallet, fetchRankedExchanges, submitWallet } from '../api/client.js';
@@ -23,7 +23,7 @@ import { analyseWallet, fetchRankedExchanges, submitWallet } from '../api/client
  * kinds of evidence - the flow, the attribution, the score, the case file - and
  * stacking them means scrolling past three to reach the fourth.
  */
-export default function Investigate({ currentUser, submitted }) {
+export default function Investigate({ currentUser, submitted, onOpenCase }) {
   const { theme } = useTheme();
   const toast = useToast();
   const [analysis, setAnalysis] = useState(null);
@@ -102,10 +102,6 @@ export default function Investigate({ currentUser, submitted }) {
         <div>
           <div className="crumb">Workspace</div>
           <h1>Investigate a suspect wallet</h1>
-          <p className="lede">
-            Trace victim-reported funds across hops, attribute the terminal cluster to an exchange,
-            and score how often reported fraud arrives there.
-          </p>
         </div>
       </div>
 
@@ -140,38 +136,32 @@ export default function Investigate({ currentUser, submitted }) {
       {analysis ? (
         <>
           <div className="stat-row">
-            <Stat label="Chain" value={analysis.chain} sub={analysis.address_kind} />
             <Stat
-              label="Addresses traced"
-              value={analysis.trace_path.node_count}
-              sub={`${analysis.trace_path.link_count} transfers`}
+              label="Risk level"
+              value={<RiskBadge label={analysis.risk_label} />}
+              sub={`Based on ${countOf(analysis.contributing_case_count, 'reported case')}`}
             />
-            <Stat label="Trace depth" value={analysis.trace_path.depth} sub="max hops followed" />
             <Stat
-              label="Terminal service"
-              value={analysis.attribution?.entity_name || '—'}
+              label="Money reached"
+              value={analysis.attribution?.entity_name || 'Not yet identified'}
               sub={
                 analysis.attribution?.method === 'tagged_db'
-                  ? 'curated tag'
+                  ? 'Identified from records'
                   : analysis.attribution?.method === 'classifier'
-                    ? 'inferred category'
-                    : 'unattributed'
+                    ? 'Suggested from behaviour'
+                    : 'No identification'
               }
             />
             <Stat
-              label="Fraud linkage"
-              value={
-                <span className="row">
-                  <RiskBadge label={analysis.risk_label} />
-                  <span className="mono">{Number(analysis.risk_score).toFixed(1)}</span>
-                </span>
-              }
-              sub={`${analysis.contributing_case_count} contributing case(s)`}
+              label="Wallets involved"
+              value={analysis.trace_path.node_count}
+              sub={`${analysis.trace_path.link_count} transfers followed`}
             />
+            <Stat label="Network" value={analysis.chain} sub="Blockchain the funds moved on" />
           </div>
 
-          <div className="row wrap sm">
-            <span className="muted">Subject</span>
+          <div className="subject-line">
+            <span className="subject-label">Reported wallet</span>
             <AddressChip
               address={analysis.address}
               full
@@ -182,8 +172,9 @@ export default function Investigate({ currentUser, submitted }) {
 
           {analysis.mixer_interaction ? (
             <Callout tone="mixer" glyph="⚠">
-              This flow interacts with a tagged mixer. Recorded as a layering signal — the system
-              makes no attempt to unwind mixing.
+              <strong>The money passed through a mixing service.</strong> A mixer is used to break
+              the trail between sender and receiver. The funds cannot be followed past that point,
+              and this itself is a strong indicator of deliberate laundering.
             </Callout>
           ) : null}
 
@@ -192,9 +183,8 @@ export default function Investigate({ currentUser, submitted }) {
               active={tab}
               onChange={setTab}
               tabs={[
-                { id: 'exposure', label: 'Service exposure' },
-                { id: 'flow', label: 'Money flow' },
-                { id: 'attribution', label: 'Attribution' },
+                { id: 'exposure', label: 'Where the money went' },
+                { id: 'attribution', label: 'Wallet identification' },
                 { id: 'risk', label: 'Risk', count: analysis.contributing_case_count },
                 { id: 'case', label: 'Case file' },
               ]}
@@ -205,36 +195,10 @@ export default function Investigate({ currentUser, submitted }) {
                 address={analysis.address}
                 maxHops={analysis.trace_path.depth}
                 onSelectAddress={setSelected}
+                tracePath={analysis.trace_path}
+                theme={theme}
+                selectedAddress={selected}
               />
-            ) : null}
-
-            {tab === 'flow' ? (
-              <>
-                <div className="flow-toolbar">
-                  <span className="sm muted">
-                    {analysis.trace_path.node_count} addresses · {analysis.trace_path.link_count}{' '}
-                    transfers · depth {analysis.trace_path.depth}
-                  </span>
-                  <span className="grow" />
-                  {selected ? (
-                    <span className="row sm">
-                      <span className="muted">Pinned</span>
-                      <AddressChip address={selected} />
-                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSelected(null)}>
-                        Clear
-                      </button>
-                    </span>
-                  ) : (
-                    <span className="tiny subtle">Click a node to pin it</span>
-                  )}
-                </div>
-                <SankeyTrace
-                  tracePath={analysis.trace_path}
-                  onSelectAddress={setSelected}
-                  selectedAddress={selected}
-                  theme={theme}
-                />
-              </>
             ) : null}
 
             {tab === 'attribution' ? (
@@ -256,11 +220,12 @@ export default function Investigate({ currentUser, submitted }) {
                   halfLifeDays={scoring?.half_life_days}
                 />
                 <div>
-                  <h4>Contributing cases — why this score</h4>
+                  <h4>Complaints behind this rating</h4>
                   <ContributingCases
                     contributions={analysis.contributions}
                     totalScore={analysis.risk_score}
                     total={analysis.contributing_case_count}
+                    onOpenCase={onOpenCase}
                   />
                 </div>
               </div>
@@ -286,7 +251,6 @@ export default function Investigate({ currentUser, submitted }) {
               )
             ) : null}
 
-            <div className="panel-foot">{analysis.notice}</div>
           </section>
         </>
       ) : !busy && !error ? (
@@ -306,5 +270,6 @@ export default function Investigate({ currentUser, submitted }) {
 Investigate.propTypes = {
   currentUser: PropTypes.shape({ role: PropTypes.string, can_approve: PropTypes.bool }),
   submitted: PropTypes.shape({ address: PropTypes.string, at: PropTypes.number }),
+  onOpenCase: PropTypes.func,
 };
-Investigate.defaultProps = { currentUser: null, submitted: null };
+Investigate.defaultProps = { currentUser: null, submitted: null, onOpenCase: undefined };

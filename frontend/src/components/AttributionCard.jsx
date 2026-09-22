@@ -1,84 +1,138 @@
 import PropTypes from 'prop-types';
 import AddressChip from './ui/AddressChip.jsx';
+import { countOf } from './ui/format.js';
 
+/**
+ * How the identification was arrived at, in words rather than method names.
+ *
+ * Which of these applies decides how much evidentiary weight the name carries,
+ * so it leads the card. A curated record and a behavioural guess look identical
+ * once they are both just a company name on a screen.
+ */
 const METHOD = {
   tagged_db: {
-    badge: 'Curated tag',
+    badge: 'Identified from records',
     tone: 'ok',
-    blurb: 'Matched against the tagged-address database seeded from public sources.',
   },
   classifier: {
-    badge: 'Behavioural inference',
+    badge: 'Suggested from behaviour',
     tone: 'warn',
-    blurb:
-      'No curated tag matched. The category below is inferred from behaviour and is a suggestion, not an identification.',
   },
   none: {
-    badge: 'Unattributed',
+    badge: 'Not identified',
     tone: 'neutral',
-    blurb: 'No curated tag, and not enough behavioural data to suggest a category.',
   },
 };
 
-/**
- * VASP attribution.
- *
- * The method badge leads, not the entity name. Whether an attribution is a
- * sourced fact or a model's guess carries very different evidentiary weight,
- * and the classifier deliberately never returns a company name.
- */
+const TYPE_TONE = { mixer: 'mixer', sanctioned: 'danger' };
+
 export default function AttributionCard({ attribution, terminals, onSelectAddress }) {
   const method = attribution?.method || 'none';
   const copy = METHOD[method] || METHOD.none;
+  const clusterSize = attribution?.cluster_size;
 
   return (
-    <div className="stack">
+    <div className="stack identification">
       <div className="row wrap">
         <span className={`badge badge-${copy.tone} badge-uppercase`}>{copy.badge}</span>
-        {attribution?.confidence != null ? (
-          <span className="badge badge-neutral">
-            confidence {Number(attribution.confidence).toFixed(2)}
-          </span>
-        ) : null}
       </div>
 
-      <h2 style={{ fontSize: 'var(--fs-xl)' }}>
-        {attribution?.entity_name || (method === 'classifier' ? 'Unnamed service' : 'Not attributed')}
+      <h2 className="identification-name">
+        {attribution?.entity_name
+          || (method === 'classifier' ? 'Name not known' : 'Not identified')}
       </h2>
 
+
       <dl className="kv">
-        {attribution?.entity_type ? (<><dt>Category</dt><dd>{attribution.entity_type}</dd></>) : null}
-        {attribution?.source ? (<><dt>Tag source</dt><dd className="mono sm">{attribution.source}</dd></>) : null}
-        {attribution?.cluster_size ? (
-          <><dt>Cluster</dt><dd>{attribution.cluster_size} address{attribution.cluster_size === 1 ? '' : 'es'}</dd></>
+        {attribution?.entity_type ? (
+          <>
+            <dt>Type of service</dt>
+            <dd>{String(attribution.entity_type).replace('_', ' ')}</dd>
+          </>
+        ) : null}
+        {attribution?.source ? (
+          <>
+            <dt>Where this came from</dt>
+            <dd>{attribution.source.replace(/_/g, ' ')}</dd>
+          </>
+        ) : null}
+        {clusterSize ? (
+          <>
+            <dt>Related wallet group</dt>
+            <dd>
+              {countOf(clusterSize, 'wallet')}
+              <div className="kv-note">
+                These wallets appear to be controlled by the same person or business, because of
+                the way they spend together. This is inferred from transaction patterns, not
+                confirmed by any registry.
+              </div>
+            </dd>
+          </>
         ) : null}
         {attribution?.matched_address ? (
           <>
-            <dt>Matched on</dt>
+            <dt>Matched on this wallet</dt>
             <dd><AddressChip address={attribution.matched_address} onSelect={onSelectAddress} /></dd>
+          </>
+        ) : null}
+        {attribution?.confidence != null ? (
+          <>
+            <dt>Confidence</dt>
+            <dd>
+              {confidenceWord(attribution.confidence)}
+              <div className="kv-note">
+                How strongly the evidence supports this identification.
+              </div>
+            </dd>
           </>
         ) : null}
       </dl>
 
-      <p className="sm muted">{copy.blurb}</p>
-      {attribution?.note ? <p className="tiny subtle">{attribution.note}</p> : null}
+      {attribution?.note ? <p className="identification-note">{attribution.note}</p> : null}
 
       {terminals && terminals.length > 0 ? (
-        <>
-          <h4>Services reached by this trace</h4>
+        <div className="reached-block">
+          <h4>Services this money reached</h4>
           <div className="stack" style={{ gap: 'var(--sp-2)' }}>
             {terminals.map((t) => (
-              <div className="row" key={`${t.address}-${t.hop}`}>
-                <span className={`dot dot-${t.entity_type === 'mixer' ? 'mixer' : t.entity_type === 'sanctioned' ? 'danger' : 'ok'}`} />
-                <strong className="sm">{t.entity_name}</strong>
-                <span className="tiny subtle">{t.entity_type} · hop {t.hop}</span>
+              <div className="reached-row" key={`${t.address}-${t.hop}`}>
+                <span className={`dot dot-${TYPE_TONE[t.entity_type] || 'ok'}`} />
+                <strong>{t.entity_name}</strong>
+                <span className="reached-meta">
+                  {String(t.entity_type).replace('_', ' ')} · after {countOf(t.hop, 'hop')}
+                </span>
               </div>
             ))}
           </div>
-        </>
+        </div>
       ) : null}
+
+      <div className="what-this-means">
+        <h4>What this means</h4>
+        <p>
+          This section shows what the reported wallet appears to be connected to, based on its
+          transaction activity and on published records of known services.
+        </p>
+        <p>
+          These are <strong>indicators, not proof of ownership</strong>. A wallet identified as
+          belonging to an exchange means the money reached that exchange — it does not mean the
+          exchange was involved in the fraud. Confirming who actually controls a wallet requires
+          a legal request to the service that holds the customer records.
+        </p>
+      </div>
     </div>
   );
+}
+
+/** A confidence figure as a word. "0.62" tells an officer nothing on its own. */
+function confidenceWord(value) {
+  const n = Number(value);
+  if (Number.isNaN(n)) return 'Unknown';
+  if (n >= 0.9) return 'Very strong';
+  if (n >= 0.7) return 'Strong';
+  if (n >= 0.5) return 'Moderate';
+  if (n > 0) return 'Weak';
+  return 'None';
 }
 
 AttributionCard.propTypes = {

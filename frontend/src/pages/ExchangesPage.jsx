@@ -31,10 +31,6 @@ export default function ExchangesPage({ signedIn }) {
         <div>
           <div className="crumb">Workspace</div>
           <h1>Exchanges by fraud linkage</h1>
-          <p className="lede">
-            Ranked by how often victim-reported funds terminate there, time-decayed so recent
-            complaints weigh more. A repeat destination is the signal; a single case is not.
-          </p>
         </div>
         {signedIn ? (
           <button type="button" className="btn btn-secondary" onClick={load}>Refresh</button>

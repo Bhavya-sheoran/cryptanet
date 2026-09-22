@@ -154,13 +154,13 @@ def can_approve(user: User) -> bool:
 DEMO_USERS = [
     {
         "username": "investigator",
-        "full_name": "Demo Investigator",
+        "full_name": "Investigator",
         "role": ROLE_INVESTIGATOR,
         "password": "investigator123",
     },
     {
         "username": "supervisor",
-        "full_name": "Demo Supervisor",
+        "full_name": "Supervisor",
         "role": ROLE_SUPERVISOR,
         "password": "supervisor123",
     },

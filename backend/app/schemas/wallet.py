@@ -66,6 +66,13 @@ class TraceSummary(BaseModel):
     complete: bool = True
     budget_exhausted: bool = False
     frontier_truncated: bool = False
+    # Addresses the indexer failed to answer for (rate limit, outage). A
+    # separate count from the budget: "we chose to stop" and "we were refused"
+    # call for different follow-up.
+    lookup_failures: int = 0
+    # Custodial services (exchanges etc.) the trail reached and deliberately
+    # did not walk into. An endpoint, not a gap.
+    stopped_at_services: int = 0
     coverage_note: str | None = None
 
 

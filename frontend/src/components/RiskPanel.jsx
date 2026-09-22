@@ -38,7 +38,15 @@ export default function RiskPanel({ label, score, factors, halfLifeDays }) {
       </div>
 
       <div className="risk-meta grow">
-        <span className={`badge badge-${tone} badge-uppercase`}>{label} fraud linkage</span>
+        {/* The word leads, not the number. "High" is what an officer acts on;
+            "81.4" is the arithmetic that produced it and means nothing without
+            the scale, so it sits underneath as supporting detail. */}
+        <span className={`badge badge-${tone} badge-uppercase risk-level-badge`}>
+          {label} risk
+        </span>
+        <p className="risk-plain">
+          How often money from reported frauds has arrived at this destination.
+        </p>
 
         <div className="risk-scale" aria-hidden="true">
           <span className={`risk-scale-seg${pct > 0 ? ' on-low' : ''}`} />
@@ -46,17 +54,19 @@ export default function RiskPanel({ label, score, factors, halfLifeDays }) {
           <span className={`risk-scale-seg${pct >= 70 ? ' on-high' : ''}`} />
         </div>
         <div className="risk-scale-caption">
-          <span>low</span><span>medium 40</span><span>high 70</span>
+          <span>Low</span><span>Medium from 40</span><span>High from 70</span>
         </div>
 
-        <ul className="factor-list" style={{ marginTop: 'var(--sp-3)' }}>
+        <ul className="factor-list" style={{ marginTop: 'var(--sp-4)' }}>
           {(factors || []).map((f) => <li key={f}>{f}</li>)}
         </ul>
 
-        <p className="tiny subtle" style={{ marginTop: 'var(--sp-2)' }}>
-          Aggregated over reported cases
-          {halfLifeDays ? ` with a ${halfLifeDays}-day half-life` : ' with time decay'}, on a
-          saturating curve so one prolific reporter cannot dominate the ranking.
+        <p className="risk-note">
+          The rating counts every reported case whose money reached here. Recent complaints count
+          for more than old ones
+          {halfLifeDays ? `, halving after ${halfLifeDays} days` : ''}, and the scale flattens
+          out at the top so one person reporting the same wallet repeatedly cannot drive it
+          to High on their own.
         </p>
       </div>
     </div>

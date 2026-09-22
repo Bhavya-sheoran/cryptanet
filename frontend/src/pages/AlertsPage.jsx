@@ -17,11 +17,6 @@ export default function AlertsPage({ onInspect, signedIn }) {
         <div>
           <div className="crumb">Workspace</div>
           <h1>Alerts</h1>
-          <p className="lede">
-            Raised when a traced wallet resolves to a Medium or High risk exchange. Delivered over
-            Redis Streams to a WebSocket, and replayable — an alert raised while nobody had the
-            dashboard open is still here.
-          </p>
         </div>
         <span className={`badge badge-${status === 'open' ? 'ok' : status === 'connecting' ? 'warn' : 'neutral'}`}>
           <span className={`dot ${status === 'open' ? 'dot-live' : ''}`} />
@@ -61,7 +56,8 @@ export default function AlertsPage({ onInspect, signedIn }) {
           )}
         </div>
         <div className="panel-foot">
-          Alerts describe synthetic demonstration data. Low-risk resolutions do not alert by design.
+          Low-risk results deliberately do not raise an alert. A feed that fires on everything is
+          one people stop reading.
         </div>
       </section>
     </>

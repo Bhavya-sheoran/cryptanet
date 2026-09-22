@@ -1,0 +1,70 @@
+/* ==========================================================================
+   Readability overrides
+   --------------------------------------------------------------------------
+   The original design used `--text-subtle` (a light grey) for a lot of
+   genuinely useful investigative information: confidence, route details,
+   footnotes explaining how a number was produced. On screen that reads as
+   disabled, and an officer skips it - which is the opposite of what secondary
+   evidence is for.
+
+   Nothing is deleted here. The rules below lift the contrast of the classes
+   that were carrying real content, and leave the small decorative uses alone.
+   Hierarchy now comes from size, weight and position rather than from fading
+   text out.
+
+   Loaded last so it wins over components.css without needing !important.
+   ========================================================================== */
+
+/* Supporting text, not disabled text. */
+.hint {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* `.subtle` was used both for decoration and for real content. Muted is
+   readable at this size and still clearly secondary to body text. */
+.subtle { color: var(--text-muted); }
+
+/* Risk band captions name the thresholds an officer is being asked to trust;
+   they were 10.5px and nearly invisible. */
+.risk-scale-caption {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  margin-top: var(--sp-1);
+}
+
+/* The factors behind a rating are the justification for it. */
+.factor-list {
+  font-size: var(--fs-md);
+  line-height: 1.55;
+  color: var(--text);
+}
+.factor-list li { margin-bottom: var(--sp-2); }
+
+.risk-level-badge { font-size: var(--fs-md); padding: 4px 10px; }
+.risk-plain {
+  margin: var(--sp-2) 0 var(--sp-3);
+  font-size: var(--fs-md);
+  color: var(--text-muted);
+  max-width: 60ch;
+}
+.risk-note {
+  margin-top: var(--sp-4);
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+  color: var(--text-muted);
+  max-width: 74ch;
+}
+
+/* Panel footers carry standing qualifications - legal notices, scope limits -
+   which must stay legible. */
+.panel-foot { color: var(--text-muted); }
+
+/* Addresses are evidence. They were being rendered at a size that invited
+   transcription errors. */
+.addr-text { font-size: var(--fs-sm); }
+
+/* Table cells marked `.sm .muted` throughout the case views were losing
+   contrast against the row background on the dark theme. */
+.table td.muted { color: var(--text-muted); }

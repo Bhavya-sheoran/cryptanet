@@ -26,6 +26,7 @@ import json
 import logging
 import random
 import time
+from collections.abc import Callable
 from datetime import UTC, datetime
 
 import httpx
@@ -123,6 +124,7 @@ def get_json(
     params: dict | None = None,
     source: str,
     use_cache: bool = True,
+    cache_if: Callable[[dict | list], bool] | None = None,
 ) -> dict | list:
     """GET a JSON document, retrying transient failures.
 
@@ -130,6 +132,12 @@ def get_json(
     the retry budget is spent. The message always names the provider, because
     "request failed" in a log tells an operator nothing about which of three
     indexers is having a bad day.
+
+    `cache_if` decides whether a successful response may be cached. Some
+    providers report errors inside an HTTP 200 - Etherscan's rate limit is
+    `200 {"status": "0", "message": "NOTOK"}` - and caching one of those
+    replays the refusal for the whole cache TTL: every retry and every later
+    trace through that address failed without asking the provider again.
     """
     key = _cache_key(url, params) if use_cache else None
     if key:
@@ -189,7 +197,7 @@ def get_json(
                 f"{source} returned a non-JSON response: {response.text[:200]}"
             ) from exc
 
-        if key:
+        if key and (cache_if is None or cache_if(payload)):
             _cache_put(key, {"payload": payload, "fetched_at": datetime.now(UTC).isoformat()})
         return payload
 

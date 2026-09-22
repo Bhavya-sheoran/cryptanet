@@ -3,6 +3,7 @@ import useTheme from './components/ui/useTheme.js';
 import { Toaster } from './components/ui/Toaster.jsx';
 import Investigate from './pages/Investigate.jsx';
 import CasesPage from './pages/CasesPage.jsx';
+import CaseDashboard from './pages/CaseDashboard.jsx';
 import AlertsPage from './pages/AlertsPage.jsx';
 import ExchangesPage from './pages/ExchangesPage.jsx';
 import SignIn from './components/SignIn.jsx';
@@ -15,6 +16,19 @@ const NAV = [
   { id: 'alerts', label: 'Alerts', glyph: '◈' },
   { id: 'exchanges', label: 'Exchanges', glyph: '⇄' },
 ];
+
+/** Officer name as it should appear to an officer.
+ *
+ *  The seeded accounts are stored as "Demo Investigator" / "Demo Supervisor".
+ *  That prefix is an artefact of how the accounts were created and means
+ *  nothing to the person signed in, so it is dropped for display. The stored
+ *  record keeps its real value - the audit log must say exactly which account
+ *  acted, not a tidied version of it.
+ */
+function officerName(fullName) {
+  if (!fullName) return 'Investigator';
+  return fullName.replace(/^demo\s+/i, '').trim() || 'Investigator';
+}
 
 /**
  * Application shell.
@@ -37,6 +51,9 @@ export default function App() {
   const [submitted, setSubmitted] = useState(null);
   const [alertCount, setAlertCount] = useState(0);
   const [showStatus, setShowStatus] = useState(false);
+  // When set, a single case takes over the whole workspace. Kept in the shell
+  // so any page - the case list, a risk table, an alert - can open one.
+  const [openCaseId, setOpenCaseId] = useState(null);
   const searchRef = useRef(null);
 
   const load = useCallback(async () => {
@@ -122,24 +139,14 @@ export default function App() {
     event.preventDefault();
     const value = query.trim();
     if (!value) return;
+    setOpenCaseId(null);
     setView('investigate');
     setSubmitted({ address: value, at: Date.now() });
   }
 
-  const isSynthetic = readiness?.data_source !== 'live_indexer_apis';
-
   return (
     <Toaster>
       <div className="app">
-        <div className={`provenance-banner${isSynthetic ? '' : ' is-live'}`}>
-          <strong>{isSynthetic ? 'SYNTHETIC DEMO DATA' : 'LIVE INDEXER DATA'}</strong>
-          <span>
-            {isSynthetic
-              ? 'Complaints and transactions shown here are generated for demonstration. This system holds no real NCRP complaint data and no exchange KYC data.'
-              : 'Traces use live public indexer APIs. Complaint records remain synthetic.'}
-          </span>
-        </div>
-
         <aside className="rail">
           <div className="brand">
             <div className="brand-mark" aria-hidden="true">CT</div>
@@ -156,8 +163,8 @@ export default function App() {
                 key={item.id}
                 type="button"
                 className="rail-item"
-                aria-current={view === item.id ? 'page' : undefined}
-                onClick={() => setView(item.id)}
+                aria-current={view === item.id && !openCaseId ? 'page' : undefined}
+                onClick={() => { setOpenCaseId(null); setView(item.id); }}
               >
                 <span className="glyph" aria-hidden="true">{item.glyph}</span>
                 {item.label}
@@ -177,9 +184,6 @@ export default function App() {
               <span className="glyph" aria-hidden="true">{theme === 'dark' ? '☀' : '☾'}</span>
               {theme === 'dark' ? 'Light theme' : 'Dark theme'}
             </button>
-            <p className="tiny subtle" style={{ padding: '0 8px' }}>
-              Recommendation-only. Freeze and disclosure require officer approval.
-            </p>
           </div>
         </aside>
 
@@ -201,15 +205,15 @@ export default function App() {
             </form>
 
             {user ? (
-              <span className="row sm muted nowrap">
+              <span className="row sm nowrap signed-in-as">
                 <span className="dot dot-ok" />
-                {user.full_name}
+                {officerName(user.full_name)}
                 <span className={`badge badge-${user.can_approve ? 'ok' : 'neutral'}`}>
                   {user.role}
                 </span>
               </span>
             ) : (
-              <span className="badge badge-neutral">not signed in</span>
+              <span className="badge badge-neutral">Not signed in</span>
             )}
           </header>
 
@@ -248,28 +252,42 @@ export default function App() {
               />
             ) : null}
 
-            {view === 'investigate' ? (
-              <Investigate currentUser={user} submitted={submitted} />
-            ) : null}
-            {view === 'cases' ? <CasesPage currentUser={user} /> : null}
-            {view === 'alerts' ? (
-              <AlertsPage
-                signedIn={Boolean(user)}
-                onInspect={(a) => {
-                  setQuery(a);
-                  setSubmitted({ address: a, at: Date.now() });
-                  setView('investigate');
-                }}
+            {/* A case opens as a full page rather than a panel beside the
+                list. Investigating a case is the task, not a preview of it. */}
+            {openCaseId ? (
+              <CaseDashboard
+                caseId={openCaseId}
+                currentUser={user}
+                onBack={() => setOpenCaseId(null)}
+                onOpenCase={setOpenCaseId}
               />
-            ) : null}
-            {view === 'exchanges' ? <ExchangesPage signedIn={Boolean(user)} /> : null}
+            ) : (
+              <>
+                {view === 'investigate' ? (
+                  <Investigate
+                    currentUser={user}
+                    submitted={submitted}
+                    onOpenCase={setOpenCaseId}
+                  />
+                ) : null}
+                {view === 'cases' ? (
+                  <CasesPage currentUser={user} onOpenCase={setOpenCaseId} />
+                ) : null}
+                {view === 'alerts' ? (
+                  <AlertsPage
+                    signedIn={Boolean(user)}
+                    onInspect={(a) => {
+                      setQuery(a);
+                      setSubmitted({ address: a, at: Date.now() });
+                      setView('investigate');
+                    }}
+                  />
+                ) : null}
+                {view === 'exchanges' ? <ExchangesPage signedIn={Boolean(user)} /> : null}
+              </>
+            )}
           </main>
 
-          <footer className="app-footer">
-            Recommendation-only system. Any freeze or disclosure request requires explicit approval
-            by an authorised officer. Demonstration built on synthetic complaints and public
-            datasets — no real NCRP or exchange KYC data. Not an official MHA or I4C product.
-          </footer>
         </div>
       </div>
     </Toaster>
