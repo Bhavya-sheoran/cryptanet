@@ -51,3 +51,7 @@ ml/artifacts/gnn_model.pt
 
 # Database dumps - real case and evidence data, never committed.
 backups/
+
+# Timestamped .env copies made before a config switch. Same secrets as .env.
+.env.backup*
+.env.*.backup

@@ -68,6 +68,11 @@ MODEL_VERSION = "risk-v1-timedecay"
 BASE_POINTS_PER_CASE = 10.0
 SATURATION = 60.0            # raw points at which the curve is ~81% of the way up
 MIXER_BONUS = 8.0            # flat uplift when traced flow touched a tagged mixer
+
+#: How many of an entity's tagged addresses are tested for reachability. A
+#: large exchange has thousands; checking every one multiplies the work per
+#: case for no real gain, because reaching any one of them is the same finding.
+MAX_REACHABILITY_TARGETS = 200
 SANCTIONED_BONUS = 40.0      # an OFAC-listed destination is categorically severe
 
 
@@ -140,26 +145,56 @@ def cases_terminating_at(
     if not cluster_key and not entity_name:
         return []
 
+    # The candidate destinations are collected FIRST - the addresses carrying
+    # this cluster key or entity tag - and reachability is then tested with
+    # both endpoints bound, via `shortestPath`.
+    #
+    # Both details matter, and both were measured against live chain data:
+    #
+    #   * Expanding `(root)-[:TRANSFERRED*0..8]->(dest)` and filtering
+    #     afterwards enumerates every path up to eight hops. On the synthetic
+    #     dataset a case held about a dozen addresses and this was instant;
+    #     on live data it took over 100 seconds for a single wallet, because a
+    #     real exchange-facing subgraph fans out combinatorially.
+    #   * `EXISTS { MATCH (root)-[:TRANSFERRED*1..8]->(dest) }` reads like the
+    #     right fix and is not: it still expands outward from root and timed
+    #     out past 45s. `shortestPath` with both ends bound searches from both
+    #     directions at once and answers the same question in about a second.
     query = """
+    MATCH (dest:Address)
+    WHERE ($cluster_key IS NOT NULL
+           AND EXISTS { MATCH (dest)-[:MEMBER_OF]->(:Cluster {cluster_key: $cluster_key}) })
+       OR ($entity_name IS NOT NULL
+           AND EXISTS { MATCH (dest)-[:TAGGED_AS]->(:Entity {name: $entity_name}) })
+    WITH collect(DISTINCT dest)[0..$max_targets] AS targets
     MATCH (k:Case)-[:REPORTED]->(root:Address {chain: $chain})
-    CALL (root) {
-      MATCH (root)-[:TRANSFERRED*0..8]->(dest:Address)
-      OPTIONAL MATCH (dest)-[:MEMBER_OF]->(cl:Cluster)
-      OPTIONAL MATCH (dest)-[:TAGGED_AS]->(e:Entity)
-      WITH dest, cl, e
-      WHERE ($cluster_key IS NOT NULL AND cl.cluster_key = $cluster_key)
-         OR ($entity_name IS NOT NULL AND e.name = $entity_name)
-      RETURN dest.address_norm AS terminal, 1 AS hit
+    CALL (root, targets) {
+      // The reported address is itself part of the cluster or entity - a
+      // complaint that named the destination directly. `*0..8` covered this
+      // in the original; a path search cannot, so it is its own branch.
+      UNWIND targets AS dest
+      WITH dest WHERE dest = root
+      RETURN dest.address_norm AS terminal
+      LIMIT 1
+      UNION
+      UNWIND targets AS dest
+      WITH dest WHERE dest <> root
+      MATCH shortestPath((root)-[:TRANSFERRED*1..8]->(dest))
+      RETURN dest.address_norm AS terminal
       LIMIT 1
     }
-    RETURN k.case_id AS case_id, k.case_number AS case_number,
+    RETURN DISTINCT k.case_id AS case_id, k.case_number AS case_number,
            k.reported_at AS reported_at, terminal
     """
     with get_driver().session() as session:
         return [
             dict(r)
             for r in session.run(
-                query, chain=chain, cluster_key=cluster_key, entity_name=entity_name
+                query,
+                chain=chain,
+                cluster_key=cluster_key,
+                entity_name=entity_name,
+                max_targets=MAX_REACHABILITY_TARGETS,
             )
         ]
 

@@ -1,11 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { fetchCases } from '../api/client.js';
-import CaseWorkspace from '../components/CaseWorkspace.jsx';
 import { Badge, EmptyState, Skeleton, TimeAgo } from '../components/ui/Bits.jsx';
+import { formatINR } from '../components/ui/format.js';
 
 const SOURCE_TONE = { ncrp_mock: 'info', synthetic: 'neutral', manual: 'neutral' };
 const STATUS_TONE = { open: 'warn', tracing: 'info', analysed: 'ok', escalated: 'danger', closed: 'neutral' };
+const STATUS_WORD = {
+  open: 'Open', tracing: 'Tracing', analysed: 'Analysed', escalated: 'Escalated', closed: 'Closed',
+};
+const SOURCE_WORD = {
+  ncrp_mock: 'NCRP feed', manual: 'Filed here', synthetic: 'Filed here',
+};
 
 /**
  * Case list, and the case file for whichever case is selected.
@@ -13,9 +19,8 @@ const STATUS_TONE = { open: 'warn', tracing: 'info', analysed: 'ok', escalated: 
  * Master/detail rather than navigation: an investigator comparing cases wants
  * the list to stay put while they read one.
  */
-export default function CasesPage({ currentUser }) {
+export default function CasesPage({ currentUser, onOpenCase }) {
   const [data, setData] = useState(null);
-  const [selected, setSelected] = useState(null);
   const [error, setError] = useState(null);
 
   const load = useCallback(async () => {
@@ -49,21 +54,16 @@ export default function CasesPage({ currentUser }) {
         <div>
           <div className="crumb">Workspace</div>
           <h1>Cases</h1>
-          <p className="lede">
-            Every complaint filed through intake or the mock NCRP feed. Selecting one opens its
-            file: notes, evidence, hashed report, STR draft and the freeze workflow.
-          </p>
         </div>
         <button type="button" className="btn btn-secondary" onClick={load}>Refresh</button>
       </div>
 
       {error ? <div className="callout callout-danger"><span className="glyph">⚠</span><div>{error}</div></div> : null}
 
-      <div className="grid-main">
-        <section className="panel">
-          <div className="panel-head">
-            <h2>All cases {data ? <span className="badge badge-neutral">{data.total}</span> : null}</h2>
-          </div>
+      <section className="panel">
+        <div className="panel-head">
+          <h2>All cases {data ? <span className="badge badge-neutral">{data.total}</span> : null}</h2>
+        </div>
           <div className="panel-body flush">
             {data === null ? (
               <div className="panel-body stack">
@@ -90,46 +90,40 @@ export default function CasesPage({ currentUser }) {
                       <tr
                         key={c.case_id}
                         className="is-clickable"
-                        onClick={() => setSelected(c.case_id)}
-                        style={selected === c.case_id ? { background: 'var(--accent-soft)' } : undefined}
+                        onClick={() => onOpenCase?.(c.case_id)}
+                        tabIndex={0}
+                        role="button"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            onOpenCase?.(c.case_id);
+                          }
+                        }}
                       >
-                        <td className="mono sm">{c.case_number}</td>
-                        <td><Badge tone={STATUS_TONE[c.status] || 'neutral'}>{c.status}</Badge></td>
+                        <td className="mono">{c.case_number}</td>
+                        <td><Badge tone={STATUS_TONE[c.status] || 'neutral'}>{STATUS_WORD[c.status] || c.status}</Badge></td>
                         <td>
                           <Badge tone={SOURCE_TONE[c.source] || 'neutral'}>
-                            {c.source === 'ncrp_mock' ? 'NCRP (mock)' : c.source}
+                            {SOURCE_WORD[c.source] || c.source}
                           </Badge>
                         </td>
-                        <td className="num">{c.amount_inr != null ? c.amount_inr.toLocaleString('en-IN') : '—'}</td>
-                        <td className="sm muted"><TimeAgo iso={c.reported_at} /></td>
+                        <td className="num">{formatINR(c.amount_inr) || '—'}</td>
+                        <td><TimeAgo iso={c.reported_at} /></td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             )}
-          </div>
-        </section>
-
-        <div className="stack">
-          {selected ? (
-            <CaseWorkspace caseId={selected} currentUser={currentUser} />
-          ) : (
-            <section className="panel">
-              <div className="panel-body">
-                <EmptyState glyph="↤" title="Select a case">
-                  Pick a case from the list to open its file.
-                </EmptyState>
-              </div>
-            </section>
-          )}
         </div>
-      </div>
+        <div className="panel-foot">Select any case to open its full investigation.</div>
+      </section>
     </>
   );
 }
 
 CasesPage.propTypes = {
   currentUser: PropTypes.shape({ role: PropTypes.string, can_approve: PropTypes.bool }),
+  onOpenCase: PropTypes.func,
 };
-CasesPage.defaultProps = { currentUser: null };
+CasesPage.defaultProps = { currentUser: null, onOpenCase: undefined };

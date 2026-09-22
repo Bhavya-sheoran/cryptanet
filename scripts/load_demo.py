@@ -92,6 +92,19 @@ def reset_case_data() -> None:
     graph_writer.clear_test_data()
     print("  neo4j                 transaction graph cleared (tags preserved)", flush=True)
 
+    # The alert feed lives in a Redis stream, not in the `alerts` table the
+    # loop above truncates. Without this the dashboard replays alerts from
+    # previous runs - including ones the test suite published, which is how
+    # "Test alert for the websocket backlog" ended up in the live feed.
+    try:
+        from app.db.redis_client import get_client
+        from app.services.alerts import STREAM_KEY
+
+        state = "removed" if get_client().delete(STREAM_KEY) else "already empty"
+        print(f"  redis                 alert stream cleared ({state})", flush=True)
+    except Exception as exc:  # noqa: BLE001 - a stale feed must not abort the reload
+        print(f"  redis                 alert stream NOT cleared: {exc}", flush=True)
+
 
 def file_complaints(depth: int | None) -> int:
     from sqlalchemy.orm import Session

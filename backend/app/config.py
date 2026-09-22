@@ -61,9 +61,20 @@ class Settings(BaseSettings):
     etherscan_api_key: str = ""
     trongrid_api_key: str = ""
     blockchair_api_key: str = ""
+    # Bitcoin's live source. Esplora needs no API key, which is why it is the
+    # BTC default; point this at a self-hosted Esplora to stop depending on
+    # Blockstream's public instance.
+    esplora_base_url: str = "https://blockstream.info/api"
 
     # --- Tracing ------------------------------------------------------------
     trace_max_depth: int = 8
+    # Node budget for the flow diagram. This bounds the *picture*, not the
+    # findings: tagged destinations and service exposure are found by separate,
+    # selective queries. Worth a real limit because Neo4j stops as soon as the
+    # budget is filled, but must otherwise exhaust the subgraph to prove no
+    # more nodes exist - on a live exchange-facing wallet that is the
+    # difference between 0.1s and 7s.
+    graph_max_nodes: int = 200
     trace_max_breadth: int = 25
 
     # --- Live indexer HTTP behaviour ---------------------------------------
@@ -81,6 +92,21 @@ class Settings(BaseSettings):
     # (100k/day) good for at least 500 traces even in the worst case, while
     # being far above what a normal trace uses (measured: 2-6 calls).
     connector_call_budget: int = 200
+    # Address lookups run in parallel within one depth level. The ceiling is
+    # the indexer's rate limit, not the CPU: Etherscan's free tier allows a few
+    # requests per second and an ETH lookup costs three of them, so raising
+    # this past a handful buys 429s and backoff rather than speed.
+    trace_concurrency: int = 6
+    # Wall-clock budget for the upstream part of a trace. Filing a complaint
+    # waits on it, and on Etherscan's free tier (3 calls/s, ~2.6 calls per
+    # address) a 40-address trace needs ~37s no matter how it is scheduled. A
+    # time budget bounds what the officer actually waits for, on every chain
+    # and provider; the trace reports `budget_exhausted` when it bites.
+    trace_time_budget_seconds: float = 18.0
+    # End a trace at custodial services (exchanges, payment processors,
+    # gambling). Following money INTO an exchange's hot wallet walks other
+    # customers' funds and consumed most of the upstream call budget.
+    trace_stop_at_services: bool = True
 
     # --- Risk scoring -------------------------------------------------------
     risk_decay_half_life_days: int = 90

@@ -15,9 +15,18 @@
 	admin off
 	# Caddy would otherwise bind :80 to redirect, which this stack does not use.
 	auto_https disable_redirects
+	# A browser opening https://192.168.x.x sends no SNI - TLS forbids an IP
+	# address there - so Caddy cannot tell which certificate is wanted and
+	# aborts the handshake. This names the one to use when none is asked for.
+	# With LAN_IP unset it is "[::1]", which matches nothing and changes nothing.
+	default_sni {$LAN_IP}
 }
 
-localhost:8443, 127.0.0.1:8443 {
+# LAN_IP (from .env, via docker-compose) adds this PC's Wi-Fi address, so other
+# devices on the same network can open https://<LAN_IP>:8443. Caddy's internal
+# CA issues a certificate for the IP; devices show a warning until they trust
+# that CA (docs/tls.md), exactly as the browser on this PC does.
+localhost:8443, 127.0.0.1:8443, {$LAN_IP}:8443 {
 	tls internal
 
 	encode gzip

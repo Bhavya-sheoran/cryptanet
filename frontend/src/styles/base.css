@@ -68,34 +68,15 @@ code, pre, .mono { font-family: var(--font-mono); font-size: 0.94em; font-varian
    trace, the case list and the alert queue, and those are places, not
    sections of a document.
    ========================================================================== */
+/* Two areas, not three: the provenance banner that used to sit above both was
+   removed, and its grid row went with it so it leaves no gap behind. */
 .app {
   display: grid;
   grid-template-columns: var(--rail-w) 1fr;
-  grid-template-rows: auto 1fr;
-  grid-template-areas:
-    "banner banner"
-    "rail   main";
+  grid-template-rows: 1fr;
+  grid-template-areas: "rail main";
   min-height: 100vh;
 }
-
-.provenance-banner {
-  grid-area: banner;
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  padding: var(--sp-2) var(--sp-5);
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-medium);
-  background: var(--warn-50);
-  color: var(--warn-700);
-  border-bottom: 1px solid var(--warn-200);
-}
-.provenance-banner.is-live {
-  background: var(--ok-50);
-  color: var(--ok-700);
-  border-bottom-color: var(--ok-200);
-}
-.provenance-banner strong { font-weight: var(--fw-bold); letter-spacing: 0.02em; }
 
 /* --- left rail ------------------------------------------------------------ */
 .rail {
@@ -187,8 +168,10 @@ code, pre, .mono { font-family: var(--font-mono); font-size: 0.94em; font-varian
 .app-footer {
   border-top: 1px solid var(--border);
   padding: var(--sp-4) var(--sp-6);
-  font-size: var(--fs-xs);
-  color: var(--text-subtle);
+  font-size: var(--fs-sm);
+  /* Muted, not subtle. This is a standing legal qualification on everything
+     above it; it should read as quiet, never as disabled. */
+  color: var(--text-muted);
   max-width: var(--content-max);
   width: 100%;
   margin: auto auto 0;

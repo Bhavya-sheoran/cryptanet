@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -19,6 +20,8 @@ from app.deps import get_current_user, record_audit
 from app.models import Case, CaseNote, CaseWallet, Evidence, Report, TraceRun, User, Wallet
 from app.services import reports as reports_svc
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/cases", tags=["cases"])
 
 # Read from settings, not hardcoded to the container path. Outside a container
@@ -26,6 +29,12 @@ router = APIRouter(prefix="/cases", tags=["cases"])
 # as an opaque 500 from the upload endpoint rather than a configuration error.
 EVIDENCE_DIR = Path(get_settings().storage_dir) / "evidence"
 MAX_EVIDENCE_BYTES = 25 * 1024 * 1024  # 25 MB
+
+# Search depth for the report's money-flow section. Matches the dashboard's
+# default and the exposure endpoint's ceiling: at the service default of 5 a
+# seven-hop route is simply not found, and the exported report would then show
+# no route for a case whose screen shows one.
+REPORT_EXPOSURE_HOPS = 8
 
 
 class NoteIn(BaseModel):
@@ -319,9 +328,29 @@ def generate_report(
                 "risk_label": risk.label,
                 "risk_score": risk.score,
                 "contributions": risk.contributions,
+                # The plain-English reasons behind the rating. The screen shows
+                # these beside the score; the report has to carry them too, or
+                # the exported case file states a rating it cannot justify.
+                "factors": risk.factors,
             }
         except Exception:  # noqa: BLE001 - a report without analysis is still useful
             analysis = None
+
+        # The route the money took, for the money-flow section. Kept in its own
+        # try: a failed exposure lookup should cost the report that one section,
+        # not the attribution and risk that already succeeded.
+        try:
+            from app.services import exposure as exposure_svc
+
+            if analysis is not None:
+                analysis["exposure"] = exposure_svc.analyse_exposure(
+                    wallet_row.chain, wallet_row.address_norm, max_hops=REPORT_EXPOSURE_HOPS
+                )
+        except Exception:  # noqa: BLE001 - the rest of the report is still useful
+            logger.warning(
+                "exposure lookup failed for case %s report; money-flow section omitted",
+                case.case_number, exc_info=True,
+            )
 
     report = reports_svc.generate_case_report(db, case, generated_by=user, analysis=analysis)
     record_audit(

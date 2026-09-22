@@ -246,3 +246,29 @@ def test_backoff_is_jittered():
     """Lockstep retries recreate the burst that caused the throttling."""
     samples = {conn_http._backoff(5) for _ in range(40)}
     assert len(samples) > 1
+
+
+# --- errors delivered as HTTP 200 must not be cached --------------------------
+
+
+def test_a_refusal_inside_a_200_is_not_cached(monkeypatch):
+    # Etherscan's rate limit is `200 {"status": "0", "message": "NOTOK"}`.
+    # Cached, it was replayed for the whole TTL: every retry and every later
+    # trace through that address failed without asking Etherscan again.
+    from app.services.connectors.live import _etherscan_answered
+
+    monkeypatch.setattr(conn_http.settings, "connector_cache_ttl_seconds", 300)
+    monkeypatch.setattr(conn_http, "_cache_get", lambda key: None)
+    stored: list[str] = []
+    monkeypatch.setattr(conn_http, "_cache_put", lambda key, value: stored.append(key))
+
+    refusal = {"status": "0", "message": "NOTOK", "result": "Max calls per sec rate limit"}
+    client, _ = transport(ok(refusal))
+    conn_http.get_json(client, "https://x.test/api", params={"a": 1}, source="t",
+                       cache_if=_etherscan_answered)
+    assert stored == [], "a rate-limit refusal was cached"
+
+    client, _ = transport(ok({"status": "1", "message": "OK", "result": []}))
+    conn_http.get_json(client, "https://x.test/api", params={"a": 2}, source="t",
+                       cache_if=_etherscan_answered)
+    assert len(stored) == 1, "a real answer should still be cached"

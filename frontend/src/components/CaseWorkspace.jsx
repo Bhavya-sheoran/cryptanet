@@ -11,8 +11,8 @@ import {
   createStrDraft,
   fetchCase,
   fetchStrDrafts,
+  downloadReport,
   generateReport,
-  reportDownloadUrl,
   uploadEvidence,
   verifyReport,
 } from '../api/client.js';
@@ -124,12 +124,12 @@ export default function CaseWorkspace({ caseId, currentUser, targetAddress, enti
       {/* --- evidence --- */}
       <h4 style={{ marginTop: 'var(--sp-6)' }}>Evidence exhibits</h4>
       {detail.evidence.length === 0 ? (
-        <p className="hint">No exhibits attached.</p>
+        <p className="hint">No exhibits attached yet.</p>
       ) : (
         <div className="table-wrap">
           <table className="table">
             <thead>
-              <tr><th>File</th><th className="num">Size</th><th>SHA-256 (chain of custody)</th></tr>
+              <tr><th>File</th><th className="num">Size</th><th>Fingerprint (proves it is unaltered)</th></tr>
             </thead>
             <tbody>
               {detail.evidence.map((e) => (
@@ -163,14 +163,14 @@ export default function CaseWorkspace({ caseId, currentUser, targetAddress, enti
       </div>
 
       {/* --- reports --- */}
-      <h4 style={{ marginTop: 'var(--sp-6)' }}>Forensic report</h4>
+      <h4 style={{ marginTop: 'var(--sp-6)' }}>Case file document</h4>
       {detail.reports.length === 0 ? (
-        <p className="hint">No report generated yet.</p>
+        <p className="hint">No case file has been generated yet.</p>
       ) : (
         <div className="table-wrap">
           <table className="table">
             <thead>
-              <tr><th>Generated</th><th>SHA-256</th><th>Actions</th></tr>
+              <tr><th>Created</th><th>Document fingerprint</th><th>Actions</th></tr>
             </thead>
             <tbody>
               {detail.reports.map((r) => (
@@ -179,9 +179,19 @@ export default function CaseWorkspace({ caseId, currentUser, targetAddress, enti
                   <td><span className="hash" title={r.sha256}>{truncateMiddle(r.sha256, 12, 8)}</span></td>
                   <td>
                     <div className="row">
-                      <a className="btn btn-secondary btn-sm" href={reportDownloadUrl(caseId, r.id)} target="_blank" rel="noreferrer">
-                        Download
-                      </a>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        disabled={busy}
+                        onClick={() =>
+                          run(
+                            () => downloadReport(caseId, r.id, `${detail.case_number}.pdf`),
+                            'Case file downloaded',
+                          )
+                        }
+                      >
+                        Download PDF
+                      </button>
                       <button
                         type="button"
                         className="btn btn-ghost btn-sm"
@@ -209,18 +219,14 @@ export default function CaseWorkspace({ caseId, currentUser, targetAddress, enti
           type="button"
           className="btn btn-secondary btn-sm"
           disabled={busy}
-          onClick={() => run(() => generateReport(caseId), 'Hashed PDF report generated')}
+          onClick={() => run(() => generateReport(caseId), 'Case file created')}
         >
-          Generate hashed PDF report
+          {detail.reports.length ? 'Create an updated case file' : 'Create complete case PDF'}
         </button>
       </div>
 
       {/* --- STR --- */}
-      <h4 style={{ marginTop: 'var(--sp-6)' }}>FIU-IND STR draft</h4>
-      <p className="hint">
-        Draft only. This system files nothing with FIU-IND; an officer must review, complete and
-        file any actual STR.
-      </p>
+      <h4 style={{ marginTop: 'var(--sp-6)' }}>Suspicious Transaction Report (STR) draft</h4>
       {drafts.map((d) => (
         <details key={d.id} className="panel" style={{ marginTop: 'var(--sp-2)', padding: 'var(--sp-3)' }}>
           <summary className="row" style={{ cursor: 'pointer' }}>

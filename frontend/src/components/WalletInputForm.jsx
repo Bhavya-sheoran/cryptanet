@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { validateAddress } from '../api/client.js';
+import { formatINR } from './ui/format.js';
 
 const DEBOUNCE_MS = 350;
 
@@ -14,7 +15,6 @@ const DEBOUNCE_MS = 350;
  */
 export default function WalletInputForm({ onAnalyse, onSubmitted, busy }) {
   const [address, setAddress] = useState('');
-  const [victimRef, setVictimRef] = useState('');
   const [amount, setAmount] = useState('');
   const [narrative, setNarrative] = useState('');
   const [check, setCheck] = useState(null);
@@ -48,23 +48,27 @@ export default function WalletInputForm({ onAnalyse, onSubmitted, busy }) {
 
   const valid = check?.valid === true;
 
+  // Echoes the typed figure back in lakh/crore as reassurance that the right
+  // number of zeros went in - 2500000 and 250000 look alike in a hurry.
+  const amountPreview = amount ? formatINR(Number(amount)) : null;
+
   const file = useCallback(
     async (event) => {
       event.preventDefault();
+      // victim_ref is still accepted by the API and used by the NCRP feed; the
+      // manual form simply no longer asks an officer to invent one.
       const result = await onSubmitted({
         address: address.trim(),
         source: 'manual',
-        victim_ref: victimRef.trim() || null,
         amount_inr: amount ? Number(amount) : null,
         narrative: narrative.trim() || null,
       });
       if (result) {
-        setVictimRef('');
         setAmount('');
         setNarrative('');
       }
     },
-    [address, victimRef, amount, narrative, onSubmitted],
+    [address, amount, narrative, onSubmitted],
   );
 
   return (
@@ -80,61 +84,47 @@ export default function WalletInputForm({ onAnalyse, onSubmitted, busy }) {
           autoComplete="off"
           spellCheck="false"
         />
-        <span className="hint" aria-live="polite" style={{ minHeight: 16 }}>
-          {checking ? 'Checking…' : null}
+        <span className="field-status" aria-live="polite" style={{ minHeight: 18 }}>
+          {checking ? 'Checking the address…' : null}
           {!checking && check && valid ? (
-            <span style={{ color: 'var(--ok-500)' }}>
-              ✓ Valid {check.chain} address ({check.address_kind})
+            <span className="status-ok">
+              ✓ Valid {check.chain} address
               {check.warnings?.length ? ` — ${check.warnings[0]}` : ''}
             </span>
           ) : null}
           {!checking && check && !valid ? (
-            <span style={{ color: 'var(--dang-500)' }}>✕ {check.reason}</span>
+            <span className="status-bad">✕ {check.reason}</span>
           ) : null}
         </span>
       </div>
 
-      <div className="grid-2" style={{ gap: 'var(--sp-4)' }}>
-        <div className="field">
-          <label className="label" htmlFor="vref">Victim reference (pseudonymous)</label>
-          <input
-            id="vref"
-            className="input"
-            value={victimRef}
-            placeholder="e.g. NCRP-REF-014"
-            onChange={(e) => setVictimRef(e.target.value)}
-          />
-        </div>
-        <div className="field">
-          <label className="label" htmlFor="amt">Amount (INR)</label>
-          <input
-            id="amt"
-            className="input"
-            type="number"
-            min="0"
-            value={amount}
-            placeholder="250000"
-            onChange={(e) => setAmount(e.target.value)}
-          />
-        </div>
+      <div className="field">
+        <label className="label" htmlFor="amt">Amount</label>
+        <input
+          id="amt"
+          className="input"
+          type="number"
+          min="0"
+          value={amount}
+          placeholder="Amount the victim lost, in rupees"
+          onChange={(e) => setAmount(e.target.value)}
+        />
+        <span className="hint">
+          {amountPreview ? `That is ${amountPreview}.` : 'Enter the amount in rupees.'}
+        </span>
       </div>
 
       <div className="field">
-        <label className="label" htmlFor="narr">Complaint narrative</label>
+        <label className="label" htmlFor="narr">Complaint narrative (optional)</label>
         <textarea
           id="narr"
           className="textarea"
-          rows={2}
+          rows={3}
           value={narrative}
           placeholder="How the victim was defrauded."
           onChange={(e) => setNarrative(e.target.value)}
         />
       </div>
-
-      <p className="hint">
-        Do not enter names, phone numbers or other personal data. Use a pseudonymous case
-        reference — the system has nowhere to store PII by design.
-      </p>
 
       <div className="row">
         <button className="btn" type="submit" disabled={!valid || busy}>

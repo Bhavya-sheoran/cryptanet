@@ -1,0 +1,310 @@
+/* ==========================================================================
+   Investigator-facing presentation
+   --------------------------------------------------------------------------
+   Written for a police officer with no blockchain background. Two rules run
+   through all of it:
+
+     * a number on screen must be a quantity someone recognises - rupees, hops,
+       hours - never a normalised score like 0.1981;
+     * supporting information must be readable. Low opacity was being used as
+       visual hierarchy, which made evidence look disabled. Hierarchy comes
+       from size, weight and position instead.
+
+   Kept in its own file rather than appended to components.css so the
+   investigator-facing layer is easy to find and revise as a whole.
+   ========================================================================== */
+
+/* --- plain-language facts ------------------------------------------------- */
+.fact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin: var(--sp-4) 0;
+}
+.fact { background: var(--bg-elevated); padding: var(--sp-4); }
+.fact-warn { background: var(--warn-50); }
+
+.fact-label {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: var(--sp-2);
+}
+.fact-value {
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-bold);
+  line-height: 1.15;
+  color: var(--text);
+}
+/* Deliberately --text-muted, not --text-subtle: this sentence is what makes
+   the number above it mean something. */
+.fact-detail {
+  margin-top: var(--sp-2);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+/* --- a destination the money reached ------------------------------------- */
+.destinations { display: flex; flex-direction: column; gap: var(--sp-3); }
+
+.destination {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  overflow: hidden;
+}
+.destination.is-top { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-soft); }
+.destination.is-direct { padding: var(--sp-5); }
+
+button.destination-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: var(--sp-4);
+  background: none;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+button.destination-head:hover { background: var(--bg-inset); }
+button.destination-head:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.destination-rank {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--text);
+}
+.destination.is-top .destination-rank { background: var(--accent); color: #fff; }
+
+.destination-title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  font-size: var(--fs-lg);
+}
+.destination-name { font-size: var(--fs-2xl); margin: var(--sp-2) 0 var(--sp-1); }
+.destination-summary {
+  display: block;
+  margin-top: var(--sp-1);
+  font-size: var(--fs-base);
+  color: var(--text-muted);
+}
+.destination-summary strong { color: var(--text); font-weight: var(--fw-bold); }
+.destination-kind {
+  font-size: var(--fs-md);
+  line-height: 1.5;
+  color: var(--text-muted);
+  max-width: 68ch;
+  margin: 0 0 var(--sp-3);
+}
+.destination-caret { flex: none; color: var(--text-muted); font-size: 12px; padding-top: 6px; }
+.destination-body { padding: 0 var(--sp-4) var(--sp-4); border-top: 1px solid var(--border-subtle); }
+
+/* --- the route the money took -------------------------------------------- */
+.route-block { margin-top: var(--sp-5); }
+.route-lede { font-size: var(--fs-md); color: var(--text-muted); margin: 0 0 var(--sp-3); }
+.route-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+.route-item {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  padding: var(--sp-2) var(--sp-3);
+  border-left: 2px solid var(--border-strong);
+  background: var(--bg-inset);
+}
+.route-step-n {
+  min-width: 120px;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--text);
+}
+
+/* --- the arithmetic: available, but not what anyone reads first ----------- */
+.ranking-detail {
+  margin-top: var(--sp-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--bg-inset);
+}
+.ranking-detail summary {
+  cursor: pointer;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  color: var(--text);
+}
+.ranking-lede {
+  margin: var(--sp-3) 0;
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+  color: var(--text-muted);
+  max-width: 72ch;
+}
+.ranking-table { margin-top: var(--sp-2); }
+
+/* --- money flow, now inside the exposure answer -------------------------- */
+.flow-block {
+  margin-top: var(--sp-6);
+  border-top: 1px solid var(--border);
+  padding-top: var(--sp-5);
+}
+.flow-block h3 { font-size: var(--fs-lg); margin: 0 0 var(--sp-2); }
+.flow-lede {
+  font-size: var(--fs-md);
+  color: var(--text-muted);
+  margin: 0 0 var(--sp-4);
+  max-width: 74ch;
+}
+/* The diagram spans the full panel width, as it did in the original Money
+   flow tab: the negative margins cancel .panel-body's padding. */
+.flow-frame {
+  margin-inline: calc(-1 * var(--sp-5));
+  border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* --- wallet identification ------------------------------------------------ */
+.identification-name { font-size: var(--fs-2xl); margin: var(--sp-2) 0; }
+.identification-plain {
+  font-size: var(--fs-base);
+  line-height: 1.6;
+  color: var(--text);
+  max-width: 72ch;
+  margin: 0 0 var(--sp-4);
+}
+.identification-note { font-size: var(--fs-sm); color: var(--text-muted); max-width: 72ch; }
+.kv-note {
+  margin-top: var(--sp-1);
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  color: var(--text-muted);
+  max-width: 60ch;
+}
+.reached-block { margin-top: var(--sp-5); }
+.reached-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  font-size: var(--fs-base);
+}
+.reached-meta { font-size: var(--fs-sm); color: var(--text-muted); }
+
+.what-this-means {
+  margin-top: var(--sp-6);
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft);
+  padding: var(--sp-4) var(--sp-5);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+.what-this-means h4 { margin: 0 0 var(--sp-2); font-size: var(--fs-md); }
+.what-this-means p {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-md);
+  line-height: 1.6;
+  color: var(--text);
+  max-width: 74ch;
+}
+.what-this-means p:last-child { margin-bottom: 0; }
+
+/* --- weighting as a bar plus a word, never a bare decimal ----------------- */
+.weight-cell { display: flex; align-items: center; gap: var(--sp-2); }
+.weight-track {
+  width: 64px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--bg-sunken);
+  overflow: hidden;
+  flex: none;
+}
+.weight-fill { display: block; height: 100%; background: var(--accent); }
+.weight-word { font-size: var(--fs-sm); color: var(--text); }
+
+/* --- shared page furniture ------------------------------------------------ */
+.section-lede {
+  font-size: var(--fs-md);
+  line-height: 1.55;
+  color: var(--text-muted);
+  max-width: 76ch;
+  margin: 0 0 var(--sp-3);
+}
+.panel-note {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-subtle);
+  padding-top: var(--sp-3);
+  margin: 0;
+}
+.callout-inline {
+  font-size: var(--fs-md);
+  color: var(--text);
+  background: var(--bg-inset);
+  border-left: 3px solid var(--accent);
+  padding: var(--sp-3) var(--sp-4);
+  margin: var(--sp-4) 0 0;
+  max-width: 74ch;
+}
+.narrative-text {
+  font-size: var(--fs-base);
+  line-height: 1.65;
+  color: var(--text);
+  max-width: 76ch;
+  margin: 0;
+}
+
+.subject-line {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.subject-label { font-size: var(--fs-sm); font-weight: var(--fw-bold); color: var(--text-muted); }
+
+.signed-in-as { color: var(--text); font-weight: var(--fw-medium); }
+.back-link { margin-bottom: var(--sp-3); }
+
+.field-status { display: block; font-size: var(--fs-sm); margin-top: var(--sp-1); }
+.status-ok { color: var(--ok-700); font-weight: var(--fw-medium); }
+.status-bad { color: var(--dang-700); font-weight: var(--fw-medium); }
+
+/* Rows that open something need to look like it. */
+.table-rows tbody tr.is-clickable { cursor: pointer; }
+.table-rows tbody tr.is-clickable:hover { background: var(--bg-inset); }
+.table-rows tbody tr.is-clickable:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* --- tablet --------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .fact-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .route-step-n { min-width: 100%; }
+  .destination-name { font-size: var(--fs-xl); }
+}

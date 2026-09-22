@@ -9,6 +9,11 @@ from __future__ import annotations
 
 import os
 
+# Captured BEFORE the override below, because it describes the DEPLOYMENT this
+# suite has been pointed at rather than the mode the suite itself runs in.
+# `pytest_configure` refuses to run against a live one - see the note there.
+_DEPLOYMENT_DEMO_MODE = os.environ.get("DEMO_MODE", "true").strip().lower()
+
 # Set before anything imports app.config, whose settings are lru_cached at first
 # use. The whole suite shares one TestClient identity, so the per-IP limiter
 # would see a few hundred requests from a single "client" in well under a
@@ -40,6 +45,40 @@ import pytest  # noqa: E402
 from app.services.connectors.base import Asset, ChainTransaction, TxIO  # noqa: E402
 
 BASE_TIME = datetime(2026, 1, 1, tzinfo=UTC)
+
+#: Escape hatch, for deliberately running the suite against a live-configured
+#: deployment that you know holds nothing you need.
+LIVE_OVERRIDE_ENV = "ALLOW_TESTS_ON_LIVE_DEPLOYMENT"
+
+
+def pytest_configure(config):
+    """Refuse to run against a deployment configured for real chain data.
+
+    The suite is destructive by design: the graph fixture calls
+    `clear_test_data()`, which deletes every transaction, cluster, case and
+    untagged address. Neo4j Community has a single database, so there is no
+    separation between "the test graph" and "the graph holding real traced
+    evidence" - running pytest against a live deployment destroys open
+    investigations.
+
+    It is not only the graph. The suite forces ALLOW_DEMO_AUTH on and seeds the
+    demo accounts, and `seed_demo_users` re-enables ones that were deactivated.
+    A run against a live deployment therefore silently restores the
+    `supervisor` login - whose password is published in this repository, and
+    whose role is the one that approves freezes.
+
+    Both were observed, not theorised: a run against the live stack wiped the
+    traced graph and turned both demo accounts back on.
+    """
+    if _DEPLOYMENT_DEMO_MODE in {"false", "0", "no"} and not os.environ.get(LIVE_OVERRIDE_ENV):
+        raise pytest.UsageError(
+            "Refusing to run the test suite against a deployment with "
+            "DEMO_MODE=false.\n"
+            "  The suite deletes traced graph data and re-enables the demo "
+            "accounts, including the supervisor login that approves freezes.\n"
+            "  Run the tests against a demo/CI stack instead. To override "
+            f"anyway, set {LIVE_OVERRIDE_ENV}=1."
+        )
 
 
 @pytest.fixture(scope="session")

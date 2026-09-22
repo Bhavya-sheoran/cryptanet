@@ -184,12 +184,18 @@ export default function SankeyTrace({ tracePath, onSelectAddress, selectedAddres
       .attr('stroke-width', 2)
       .attr('rx', 2)
       .append('title')
-      .text(
-        (d) =>
-          `${d.address}\nhop ${d.hop}` +
-          (d.entity_name ? `\n${d.entity_name} (${d.entity_type})` : '') +
-          (d.cluster_key ? `\ncluster: ${d.cluster_key}` : ''),
-      );
+      .text((d) => {
+        // Read by an officer hovering a box, so it says what each line means.
+        // "cluster: 7f3a..." named an internal key and explained nothing; the
+        // key is kept, because it is what makes the grouping checkable, but it
+        // now arrives with the sentence that says why it matters.
+        const lines = [d.address, d.hop === 0 ? 'Reported wallet' : `Hop ${d.hop}`];
+        if (d.entity_name) lines.push(`${d.entity_name} (${d.entity_type})`);
+        if (d.cluster_key) {
+          lines.push(`Appears to share an owner with other addresses (group ${d.cluster_key})`);
+        }
+        return lines.join('\n');
+      });
 
     node
       .append('text')

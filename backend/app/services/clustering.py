@@ -44,11 +44,31 @@ HEURISTIC_ACCOUNT_SINGLE = "account_single"
 # ---------------------------------------------------------------------------
 # Heuristic 1: common input ownership
 # ---------------------------------------------------------------------------
+# Each transaction's inputs are linked as a STAR - every input to the
+# lexicographically smallest one - not as a clique of every pair.
+#
+# The clusters are identical either way: the resolver below takes weakly
+# connected components, and a star connects exactly the same set of addresses
+# as a clique. What differs is the cost. A clique is n(n-1)/2 edges, and real
+# Bitcoin has exchange consolidation transactions with hundreds of inputs: 360
+# live-traced transactions produced 1,093,625 pairs, the query ran 45 seconds
+# and then exhausted Neo4j's transaction memory, failing the complaint intake
+# that triggered it. A star is n-1 edges.
+#
+# The anchor is deterministic, so re-running this MERGEs the same edges rather
+# than adding new ones.
 _COMMON_INPUT = """
-MATCH (a:Address)-[:SENT]->(t:Transaction)<-[:SENT]-(b:Address)
-WHERE t.chain = $chain
-  AND a.address_norm < b.address_norm
-MERGE (a)-[r:SAME_OWNER {heuristic: $heuristic}]->(b)
+MATCH (a:Address)-[:SENT]->(t:Transaction)
+WHERE t.chain = $chain AND t.input_count > 1
+WITH t, collect(DISTINCT a) AS inputs
+WHERE size(inputs) > 1
+WITH t, inputs,
+     reduce(m = head(inputs), x IN inputs |
+            CASE WHEN x.address_norm < m.address_norm THEN x ELSE m END) AS anchor
+UNWIND inputs AS b
+WITH t, anchor, b
+WHERE b.address_norm <> anchor.address_norm
+MERGE (anchor)-[r:SAME_OWNER {heuristic: $heuristic}]->(b)
   ON CREATE SET r.txid = t.txid, r.created_at = datetime()
 RETURN count(r) AS edges
 """

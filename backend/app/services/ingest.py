@@ -13,6 +13,8 @@ demo loader can reuse exactly the same path a manual submission takes.
 from __future__ import annotations
 
 import logging
+import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 
 from sqlalchemy import func, select
@@ -90,6 +92,121 @@ def next_case_number(db: Session) -> str:
 # ---------------------------------------------------------------------------
 # Graph expansion
 # ---------------------------------------------------------------------------
+#: Entity types whose addresses end a trace. Custodial services only - the
+#: money is deposited and mixes with every other customer's. Mixers are NOT
+#: here: funds genuinely pass through a mixer and continue, and the system's
+#: stance is to flag mixer contact, not to stop following the money there.
+CUSTODIAL_ENTITY_TYPES = ("exchange", "payment_processor", "gambling")
+
+_CUSTODIAL = """
+MATCH (a:Address {chain: $chain})-[:TAGGED_AS]->(e:Entity)
+WHERE a.address_norm IN $addresses AND e.entity_type IN $types
+RETURN DISTINCT a.address_norm AS address
+"""
+
+
+def _custodial_addresses(chain: str, addresses: list[str]) -> set[str]:
+    """Which of `addresses` belong to a tagged custodial service.
+
+    One query per trace level, against the seeded tag database. A tag lookup
+    failure returns an empty set: the trace then simply expands as it did
+    before this optimisation existed, which is slower but never wrong.
+    """
+    if not addresses:
+        return set()
+    from app.db.neo4j import get_driver
+
+    try:
+        with get_driver().session() as session:
+            return {
+                r["address"]
+                for r in session.run(
+                    _CUSTODIAL,
+                    chain=chain,
+                    addresses=list(addresses),
+                    types=list(CUSTODIAL_ENTITY_TYPES),
+                )
+            }
+    except Exception:  # noqa: BLE001 - see docstring: degrade to plain expansion
+        logger.warning("custodial tag lookup failed; expanding without it", exc_info=True)
+        return set()
+
+
+#: Returned for an address whose lookup never started because the trace's
+#: time budget ran out first.
+_SKIPPED: list = []
+
+
+def _fetch_frontier(
+    connector: BlockchainConnector,
+    addresses: list[str],
+    limit: int,
+    depth: int,
+    deadline: float | None = None,
+) -> list[tuple[str, list[ChainTransaction] | None]]:
+    """Fetch every address at one depth level, concurrently.
+
+    Pure network I/O against a public indexer, so threads apply cleanly and
+    httpx.Client is documented as thread-safe. Results come back as
+    (address, transactions) pairs and are processed by the caller on one
+    thread, which keeps `seen`, `collected` and the next frontier free of any
+    concurrent mutation.
+
+    An address whose lookup fails yields None rather than aborting the level:
+    one indexer error should cost that branch, not the whole trace. None and
+    not an empty list, because "this wallet has no transactions" and "we could
+    not ask" are different findings, and the caller must count the second.
+    """
+    if len(addresses) == 1:
+        # Not worth a pool, and keeps single-address traces easy to follow in
+        # a stack trace.
+        return [(addresses[0], _safe_fetch(connector, addresses[0], limit, depth, deadline))]
+
+    workers = min(get_settings().trace_concurrency, len(addresses))
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = [
+            (address, pool.submit(_safe_fetch, connector, address, limit, depth, deadline))
+            for address in addresses
+        ]
+        # Returned in the order the addresses were given, not the order the
+        # lookups happened to finish. The caller builds the next frontier from
+        # this, and the call budget then decides which of those addresses are
+        # expanded - so completion order would make the same complaint trace
+        # to a different graph on each run. A trace has to be reproducible to
+        # be evidence.
+        return [(address, future.result()) for address, future in futures]
+
+
+def _safe_fetch(
+    connector: BlockchainConnector,
+    address: str,
+    limit: int,
+    depth: int,
+    deadline: float | None = None,
+) -> list[ChainTransaction] | None:
+    # Checked when the lookup actually starts, not when it was queued: behind a
+    # rate-limited provider, work queued early can still be waiting when the
+    # budget ends, and starting it then is exactly the overrun being prevented.
+    if deadline is not None and time.monotonic() >= deadline:
+        return _SKIPPED
+    try:
+        metrics.upstream_calls_total.labels(source=connector.source_name).inc()
+        return connector.get_transactions(address, limit=limit)
+    except ConnectorError as exc:
+        # Counted, not just logged. An indexer failing does not break anything
+        # visibly - it silently shortens every trace, and the truncated answer
+        # still looks like an answer.
+        metrics.indexer_errors_total.labels(source=connector.source_name).inc()
+        logger.warning(
+            "connector failed for %s at depth %d: %s",
+            address,
+            depth,
+            exc,
+            extra={"source": connector.source_name, "depth": depth},
+        )
+        return None
+
+
 def expand_money_flow(
     connector: BlockchainConnector,
     chain: str,
@@ -122,17 +239,46 @@ def expand_money_flow(
     calls_made = 0
     budget_exhausted = False
     frontier_truncated = False
+    lookup_failures = 0
+    stopped_at_services = 0
+    deadline = time.monotonic() + settings.trace_time_budget_seconds
 
     for depth in range(max_depth):
         if not frontier or budget_exhausted:
             break
+        if time.monotonic() >= deadline:
+            budget_exhausted = True
+            logger.warning(
+                "trace of %s stopped at depth %d: %.0fs time budget spent",
+                root_address,
+                depth,
+                settings.trace_time_budget_seconds,
+            )
+            break
         next_frontier: list[str] = []
 
+        # Custodial services end the trail. The edge INTO the exchange is
+        # already recorded (it came from the previous hop's transactions), so
+        # attribution, exposure and risk all still see it - what is skipped is
+        # walking the exchange's own hot wallet, which is thousands of other
+        # customers' money and says nothing about this victim's. It was also
+        # where most of the call budget went. Never applied to the reported
+        # address itself: a complaint can legitimately name an exchange wallet.
+        if depth > 0 and settings.trace_stop_at_services:
+            endpoints = _custodial_addresses(chain, [a for a in frontier if a not in seen])
+            if endpoints:
+                seen.update(endpoints)
+                stopped_at_services += len(endpoints)
+                frontier = [a for a in frontier if a not in endpoints]
+
+        # Decide this level's batch up front, so the budget is still spent
+        # exactly and `seen` is updated on one thread before any fetching
+        # starts. Everything after this point is read-only on that set.
+        batch: list[str] = []
         for address in frontier:
             if address in seen:
                 continue
-
-            if calls_made >= budget:
+            if calls_made + len(batch) >= budget:
                 budget_exhausted = True
                 logger.warning(
                     "trace of %s stopped at depth %d: upstream call budget of %d spent",
@@ -141,27 +287,31 @@ def expand_money_flow(
                     budget,
                 )
                 break
+            batch.append(address)
 
-            seen.add(address)
+        if not batch:
+            break
 
-            try:
-                calls_made += 1
-                metrics.upstream_calls_total.labels(source=connector.source_name).inc()
-                txs = connector.get_transactions(address, limit=max_breadth)
-            except ConnectorError as exc:
-                # Counted, not just logged. An indexer failing does not break
-                # anything visibly - it silently shortens every trace, and the
-                # truncated answer still looks like an answer.
-                metrics.indexer_errors_total.labels(source=connector.source_name).inc()
-                logger.warning(
-                    "connector failed for %s at depth %d: %s",
-                    address,
-                    depth,
-                    exc,
-                    extra={"source": connector.source_name, "depth": depth},
-                )
+        seen.update(batch)
+        calls_made += len(batch)
+
+        # Addresses at the same depth are independent lookups, so they are
+        # fetched together rather than one after another. Sequentially this was
+        # the whole cost of a trace: an Ethereum address takes ~2.6s (three
+        # Etherscan calls - native, ERC-20, internal), so forty of them ran to
+        # well over a minute and the dashboard gave up waiting. The work is
+        # entirely network-bound, which is what makes threads the right tool.
+        skipped = 0
+        for address, txs in _fetch_frontier(connector, batch, max_breadth, depth, deadline):
+            if txs is _SKIPPED:
+                # Not started before the time budget ran out. Budget, not a
+                # failure: the provider was never asked.
+                skipped += 1
+                budget_exhausted = True
                 continue
-
+            if txs is None:
+                lookup_failures += 1
+                continue
             for tx in txs:
                 collected.setdefault(f"{tx.chain}:{tx.txid}", tx)
                 # Compare in normalised space. Connectors return addresses in
@@ -174,6 +324,9 @@ def expand_money_flow(
                         out_norm = normalize_address(chain, out)
                         if out_norm not in seen:
                             next_frontier.append(out_norm)
+
+        # upstream_calls reports lookups actually made.
+        calls_made -= skipped
 
         if next_frontier:
             hops = depth + 1
@@ -207,8 +360,36 @@ def expand_money_flow(
         "upstream_calls": calls_made,
         "budget_exhausted": budget_exhausted,
         "frontier_truncated": frontier_truncated,
-        "complete": not (budget_exhausted or frontier_truncated),
+        # An address the indexer would not answer for is a hole in the trace,
+        # exactly like one the budget skipped. Before this was counted, a
+        # throttled Ethereum trace lost most of its addresses and still
+        # reported itself complete.
+        "lookup_failures": lookup_failures,
+        # Not a gap: reaching an exchange is where a trail is supposed to end.
+        # Reported so the count is visible, and deliberately not part of
+        # `complete`.
+        "stopped_at_services": stopped_at_services,
+        "complete": not (budget_exhausted or frontier_truncated or lookup_failures),
     }
+
+
+def _coverage_note(expansion: dict) -> str | None:
+    """Say, in plain words, why a trace is not exhaustive - or return None."""
+    if expansion["complete"]:
+        return None
+    reasons = []
+    if expansion["budget_exhausted"] or expansion["frontier_truncated"]:
+        reasons.append("stopped early to bound upstream API usage")
+    if expansion.get("lookup_failures"):
+        n = expansion["lookup_failures"]
+        reasons.append(
+            f"the blockchain data provider did not answer for {n} "
+            f"address{'es' if n != 1 else ''}"
+        )
+    return (
+        "Trace is not exhaustive: " + "; ".join(reasons) + ". Findings are valid, "
+        "but absence of a result is not evidence of absence."
+    )
 
 
 def detect_mixer_interaction(chain: str, addresses: set[str]) -> bool:
@@ -337,11 +518,12 @@ def intake_wallet(
         if not expansion["complete"]:
             logger.warning(
                 "trace of %s was truncated: %d upstream calls, budget_exhausted=%s, "
-                "frontier_truncated=%s",
+                "frontier_truncated=%s, lookup_failures=%d",
                 info.address_norm,
                 expansion["upstream_calls"],
                 expansion["budget_exhausted"],
                 expansion["frontier_truncated"],
+                expansion["lookup_failures"],
             )
 
         if run_clustering and expansion["transactions"]:
@@ -384,13 +566,9 @@ def intake_wallet(
             "complete": expansion["complete"],
             "budget_exhausted": expansion["budget_exhausted"],
             "frontier_truncated": expansion["frontier_truncated"],
-            "coverage_note": (
-                None
-                if expansion["complete"]
-                else "Trace stopped early to bound upstream API usage. Findings are "
-                "valid but not exhaustive; absence of a result is not evidence of "
-                "absence."
-            ),
+            "lookup_failures": expansion["lookup_failures"],
+            "stopped_at_services": expansion["stopped_at_services"],
+            "coverage_note": _coverage_note(expansion),
         },
         "cluster": {
             "cluster_key": cluster.get("cluster_key"),

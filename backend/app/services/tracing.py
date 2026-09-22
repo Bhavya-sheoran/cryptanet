@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 
+from app.config import get_settings
 from app.db.neo4j import get_driver
 from app.services.connectors.base import SOURCE_SYNTHETIC
 
@@ -40,11 +41,21 @@ RETURN dest.address_norm AS address,
 ORDER BY hop, address
 """
 
+#
+# `dest` is bound through its tag BEFORE the shortestPath rather than after.
+# Two reasons, both learned from real chain data:
+#   * Neo4j refuses a shortestPath whose start and end are the same node, and
+#     on a live chain a wallet does send back to itself. Binding dest first
+#     lets `dest <> root` exclude that case before the search runs; filtering
+#     afterwards is too late and the query dies with a DatabaseError.
+#   * Tagged addresses are a tiny fraction of the graph, so starting from them
+#     is also the more selective plan.
 _TERMINALS = """
 MATCH (root:Address {chain: $chain, address_norm: $address_norm})
-MATCH p = shortestPath((root)-[:TRANSFERRED*1..%(depth)d]->(dest:Address))
-MATCH (dest)-[:TAGGED_AS]->(e:Entity)
+MATCH (dest:Address)-[:TAGGED_AS]->(e:Entity)
 WHERE e.entity_type IN ['exchange', 'sanctioned', 'payment_processor', 'gambling']
+  AND dest <> root
+MATCH p = shortestPath((root)-[:TRANSFERRED*1..%(depth)d]->(dest))
 OPTIONAL MATCH (dest)-[:MEMBER_OF]->(cl:Cluster)
 RETURN dest.address_norm AS address, length(p) AS hop,
        e.name AS entity_name, e.entity_type AS entity_type,
@@ -53,9 +64,21 @@ ORDER BY hop ASC
 """
 
 # Endpoints of the flow: nothing leaves them within the traced subgraph.
+#
+# Reachable addresses are enumerated from the root and only then filtered down
+# to the ones with no onward transfer. The other way round - scanning every
+# address on the chain for a dead end - reads the whole graph: on live data
+# that is tens of thousands of nodes per chain and the query stops returning
+# in reasonable time.
 _SINKS = """
 MATCH (root:Address {chain: $chain, address_norm: $address_norm})
-MATCH p = shortestPath((root)-[:TRANSFERRED*1..%(depth)d]->(dest:Address))
+CALL (root) {
+  MATCH p = shortestPath((root)-[:TRANSFERRED*1..%(depth)d]->(dest:Address))
+  WHERE dest <> root
+  RETURN p, dest
+  LIMIT 500
+}
+WITH root, p, dest
 WHERE NOT EXISTS { MATCH (dest)-[:TRANSFERRED]->(:Address) }
 OPTIONAL MATCH (dest)-[:MEMBER_OF]->(cl:Cluster)
 RETURN dest.address_norm AS address, length(p) AS hop,
@@ -65,8 +88,18 @@ LIMIT 25
 """
 
 
-def trace_path(chain: str, address_norm: str, depth: int = 6, max_nodes: int = 300) -> dict:
-    """Ordered hops reachable from `address_norm`, plus Sankey-ready node/link sets."""
+def trace_path(
+    chain: str, address_norm: str, depth: int = 6, max_nodes: int | None = None
+) -> dict:
+    """Ordered hops reachable from `address_norm`, plus Sankey-ready node/link sets.
+
+    `max_nodes` defaults to the configured budget. It caps the diagram, not the
+    investigation: tagged destinations come from `terminal_attributions` and
+    service exposure from its own query, both of which are selective and
+    unaffected by this limit. When the budget bites, `truncated` says so.
+    """
+    if max_nodes is None:
+        max_nodes = get_settings().graph_max_nodes
     query = _TRACE_PATH % {"depth": max(1, min(depth, 8))}
     with get_driver().session() as session:
         rows = [

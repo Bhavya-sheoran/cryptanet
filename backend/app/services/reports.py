@@ -21,7 +21,18 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.models import Case, CaseNote, CaseWallet, Evidence, Report, TraceRun, User, Wallet
+from app.models import (
+    Case,
+    CaseNote,
+    CaseWallet,
+    Evidence,
+    Report,
+    StrDraft,
+    TraceRun,
+    User,
+    Wallet,
+)
+from app.services import exposure as exposure_svc
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -107,6 +118,46 @@ class ForensicPDF(FPDF):
         self.multi_cell(0, 4.2, _ascii(text), border=1, fill=True, new_x="LMARGIN", new_y="NEXT")
         self.ln(2)
 
+    def flow(self, steps: list[tuple[str, str]]):
+        """Draw the route as a vertical chain of labelled boxes.
+
+        Drawn with fpdf2's own primitives rather than an embedded image: it
+        keeps the report a pure-Python build with no plotting dependency, and
+        the addresses stay selectable text rather than pixels, which is what
+        makes them checkable against a block explorer.
+        """
+        box_w, box_h, gap = 150.0, 9.0, 4.0
+        for i, (role, address) in enumerate(steps):
+            # Keep a box and its connector together across a page break.
+            if self.get_y() + box_h + gap > self.h - self.b_margin:
+                self.add_page()
+
+            x, y = self.l_margin, self.get_y()
+            last = i == len(steps) - 1
+            if i == 0:
+                self.set_fill_color(226, 236, 250)
+            elif last:
+                self.set_fill_color(250, 226, 226)
+            else:
+                self.set_fill_color(244, 244, 244)
+            self.set_draw_color(170, 170, 170)
+            self.rect(x, y, box_w, box_h, style="DF")
+
+            self.set_xy(x + 2, y + 1.2)
+            self.set_font("Helvetica", "B", 7)
+            self.cell(30, 3, _ascii(role), new_x="LMARGIN", new_y="NEXT")
+            self.set_xy(x + 2, y + 4.6)
+            self.set_font("Helvetica", "", 7.5)
+            self.cell(box_w - 4, 3.4, _ascii(address), new_x="LMARGIN", new_y="NEXT")
+
+            self.set_y(y + box_h)
+            if not last:
+                # Connector between this hop and the next.
+                mid = x + box_w / 2
+                self.line(mid, self.get_y(), mid, self.get_y() + gap)
+                self.set_y(self.get_y() + gap)
+        self.ln(2)
+
 
 def _gather(db: Session, case: Case) -> dict:
     wallets = list(
@@ -131,7 +182,62 @@ def _gather(db: Session, case: Case) -> dict:
             select(Evidence).where(Evidence.case_id == case.id).order_by(Evidence.uploaded_at)
         ).scalars().all()
     )
-    return {"wallets": wallets, "traces": traces, "notes": notes, "exhibits": exhibits}
+    # The most recent STR draft, if an officer has drafted one. The report
+    # reproduces an existing draft; it never creates one, because drafting an
+    # STR is a deliberate act that belongs to the officer, not a side effect of
+    # exporting a PDF.
+    str_draft = db.execute(
+        select(StrDraft)
+        .where(StrDraft.case_id == case.id)
+        .order_by(StrDraft.created_at.desc())
+    ).scalars().first()
+    return {
+        "wallets": wallets,
+        "traces": traces,
+        "notes": notes,
+        "exhibits": exhibits,
+        "str_draft": str_draft,
+    }
+
+
+def _route_of(exposure: dict) -> dict | None:
+    """The top-ranked route from an exposure result, ready to draw.
+
+    Returns None when there is nothing real to draw - no exposure, a direct
+    payment (which is a single transaction, not a route), or a candidate with
+    no path recorded. Drawing a placeholder diagram in those cases would put a
+    picture in a case file that no data supports.
+    """
+    if not exposure:
+        return None
+    candidates = exposure.get("candidates") or []
+    if not candidates:
+        return None
+
+    top = min(candidates, key=lambda c: c.get("rank", 99))
+    features = top.get("features") or {}
+    path = features.get("shortest_path") or []
+    if len(path) < 2:
+        return None
+
+    steps = []
+    for i, addr in enumerate(path):
+        if i == 0:
+            role = "Reported wallet"
+        elif i == len(path) - 1:
+            role = features.get("service") or "Destination"
+        else:
+            role = f"Hop {i}"
+        steps.append((role, addr))
+
+    return {
+        "service": features.get("service") or "an unidentified service",
+        "service_type": (features.get("service_type") or "unknown").replace("_", " "),
+        "hop": features.get("hop", len(path) - 1),
+        "amount_inr": features.get("total_volume_inr"),
+        "path": path,
+        "steps": steps,
+    }
 
 
 def generate_case_report(
@@ -177,7 +283,14 @@ def generate_case_report(
         pdf.para("No trace has been run for this case.")
 
     if analysis:
-        pdf.h2("4. Attribution and risk")
+        pdf.h2("4. Attribution and risk (the reported wallet)")
+        pdf.para(
+            "This section identifies and rates the REPORTED WALLET's cluster - who appears to "
+            "control the address in the complaint. Where the money ended up is a separate "
+            "question, answered in the money-flow section below. The two can legitimately "
+            "differ: an unidentified wallet can still send money to a named exchange.",
+            size=8,
+        )
         attribution = analysis.get("attribution") or {}
         pdf.kv("Attribution method", attribution.get("method", "none"))
         pdf.kv("Entity", attribution.get("entity_name") or "not named")
@@ -193,6 +306,16 @@ def generate_case_report(
                 "category is a suggestion; no entity is named because behaviour alone cannot "
                 "identify one."
             )
+
+        factors = analysis.get("factors") or []
+        if factors:
+            # The factor list is the plain-English reason for the rating. A
+            # score without it cannot be justified in a case file, which is
+            # the same rule the dashboard follows.
+            pdf.ln(1)
+            pdf.para("Why this rating was given:")
+            for factor in factors:
+                pdf.para(f"  - {factor}", size=8.5)
 
         contributions = analysis.get("contributions") or []
         if contributions:
@@ -218,7 +341,44 @@ def generate_case_report(
                 "saturating curve. The figures above are sufficient to recompute it."
             )
 
-    pdf.h2("6. Case notes")
+    exposure = (analysis or {}).get("exposure") or {}
+    route = _route_of(exposure)
+    if route:
+        pdf.h2("6. Money flow")
+        service = route["service"]
+        pdf.para(
+            f"The reported wallet did not pay {service} directly. The money was followed "
+            f"onward through {len(route['path']) - 1} transfer(s) to reach it. Each box below "
+            "is one wallet the money passed through, in order."
+        )
+        pdf.flow(route["steps"])
+        if route["amount_inr"] is not None:
+            pdf.kv("Amount reaching destination", f"INR {route['amount_inr']:,.2f} (estimated)")
+        pdf.kv("Destination", f"{service} ({route['service_type']})")
+        pdf.kv("Hops", str(route["hop"]))
+        pdf.para(
+            "Rupee figures are estimated from public exchange rates at the time of analysis. "
+            "They are not exchange records and carry no KYC. Transfers below the dust floor of "
+            f"INR {exposure_svc.VOLUME_DUST_INR:,.0f} score zero on value, so a negligible "
+            "amount arriving at a service cannot rank as exposure on proximity alone.",
+            size=8,
+        )
+
+    pdf.h2("7. Mixer and sanctions screening")
+    mixer_seen = any(t.mixer_interaction for t in data["traces"])
+    pdf.kv("Tagged mixer contact", "yes - flagged, not unwound" if mixer_seen else "none observed")
+    entity_type = ((analysis or {}).get("attribution") or {}).get("entity_type")
+    factor_text = " ".join((analysis or {}).get("factors") or []).lower()
+    sanctioned = entity_type == "sanctioned" or "sdn" in factor_text
+    pdf.kv("Sanctions screening", "MATCH - destination on the OFAC SDN list" if sanctioned
+           else "no match against the loaded sanctions list")
+    pdf.para(
+        "Screening is against the public sanctions and mixer labels loaded into this system. "
+        "A 'no match' means nothing matched those lists, not that the funds are clean.",
+        size=8,
+    )
+
+    pdf.h2("8. Case notes")
     if data["notes"]:
         for n in data["notes"]:
             stamp = n.created_at.isoformat() if n.created_at else ""
@@ -226,14 +386,32 @@ def generate_case_report(
     else:
         pdf.para("No notes recorded.")
 
-    pdf.h2("7. Evidence exhibits (chain of custody)")
+    pdf.h2("9. Evidence exhibits (chain of custody)")
     if data["exhibits"]:
         for e in data["exhibits"]:
             pdf.kv(e.filename, f"sha256 {e.sha256} | {e.size_bytes} bytes | {e.uploaded_at}")
     else:
         pdf.para("No exhibits attached.")
 
-    pdf.h2("8. Integrity and limitations")
+    pdf.h2("10. Suspicious Transaction Report draft")
+    draft = data["str_draft"]
+    if draft is not None:
+        pdf.kv("Draft status", draft.status)
+        pdf.kv("Drafted at", draft.created_at.isoformat() if draft.created_at else "-")
+        pdf.para(
+            "Reproduced below as drafted. It has not been filed with FIU-IND by this system.",
+            size=8,
+        )
+        pdf.ln(1)
+        pdf.para(draft.body, size=7.5)
+    else:
+        pdf.para(
+            "No STR has been drafted for this case. A draft can be produced from the case "
+            "screen; drafting and filing are deliberate acts for an authorised officer, so "
+            "this export does not create one."
+        )
+
+    pdf.h2("11. Integrity and limitations")
     generated_at = datetime.now(UTC)
     pdf.kv("Generated at", generated_at.isoformat())
     pdf.kv("Generated by", generated_by.username if generated_by else "system")
