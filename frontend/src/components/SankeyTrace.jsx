@@ -108,7 +108,7 @@ export default function SankeyTrace({ tracePath, onSelectAddress, selectedAddres
         .attr('x', 16)
         .attr('y', 28)
         .attr('fill', (cssErr.getPropertyValue('--text-muted') || '').trim() || '#6b7480')
-        .attr('font-size', 13)
+        .attr('font-size', 15)
         .text('Flow contains a cycle and cannot be drawn as a Sankey. See the hop list below.');
       return;
     }
@@ -202,7 +202,7 @@ export default function SankeyTrace({ tracePath, onSelectAddress, selectedAddres
       .attr('x', (d) => d.x1 + 6)
       .attr('y', (d) => (d.y1 + d.y0) / 2)
       .attr('dy', '0.35em')
-      .attr('font-size', 11).attr('font-family', 'var(--font-sans)')
+      .attr('font-size', 13).attr('font-family', 'var(--font-sans)')
       .attr('fill', (d) => (d.entity_name ? C.entityText : C.text))
       .text((d) => {
         if (d.entity_name) return `${d.entity_name} · h${d.hop}`;

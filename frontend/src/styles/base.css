@@ -123,7 +123,7 @@ code, pre, .mono { font-family: var(--font-mono); font-size: 0.94em; font-varian
   border-radius: var(--r-md);
   background: none; border: 0; width: 100%;
   color: var(--text-muted);
-  font: inherit; font-size: var(--fs-md); text-align: left;
+  font: inherit; font-size: var(--fs-md); font-weight: var(--fw-bold); text-align: left;
   cursor: pointer;
   transition: background var(--transition), color var(--transition);
 }
@@ -131,9 +131,8 @@ code, pre, .mono { font-family: var(--font-mono); font-size: 0.94em; font-varian
 .rail-item[aria-current="page"] {
   background: var(--accent-soft);
   color: var(--accent);
-  font-weight: var(--fw-medium);
 }
-.rail-item .glyph { width: 18px; text-align: center; flex: none; font-size: 14px; }
+.rail-item .glyph { width: 18px; text-align: center; flex: none; font-size: 16px; }
 .rail-item .count {
   margin-left: auto;
   font-size: var(--fs-xs);

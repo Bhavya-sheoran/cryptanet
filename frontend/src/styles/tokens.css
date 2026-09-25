@@ -93,14 +93,14 @@
   --font-mono: "JetBrains Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas,
                "Liberation Mono", monospace;
 
-  --fs-xs:  11.5px;
-  --fs-sm:  12.5px;
-  --fs-md:  13.5px;
-  --fs-base:14.5px;
-  --fs-lg:  16px;
-  --fs-xl:  19px;
-  --fs-2xl: 24px;
-  --fs-3xl: 30px;
+  --fs-xs:  13.5px;
+  --fs-sm:  14.5px;
+  --fs-md:  15.5px;
+  --fs-base:16.5px;
+  --fs-lg:  18px;
+  --fs-xl:  21px;
+  --fs-2xl: 26px;
+  --fs-3xl: 32px;
 
   --lh-tight: 1.25;
   --lh-base:  1.55;
