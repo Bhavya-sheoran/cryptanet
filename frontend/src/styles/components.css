@@ -61,6 +61,13 @@
 
 /* --- form controls -------------------------------------------------------- */
 .field { display: flex; flex-direction: column; gap: var(--sp-1); }
+/* Validation sits beside the label rather than under the input: below it, the
+   line either reserved empty space or made the form jump as it appeared. */
+.field-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--sp-3); min-width: 0;
+}
+.field-head .field-status { text-align: right; }
 .label { font-size: var(--fs-sm); font-weight: var(--fw-medium); color: var(--text-muted); }
 .hint  { font-size: var(--fs-xs); color: var(--text-subtle); }
 
@@ -117,7 +124,10 @@
 .badge {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 2px 8px;
-  border-radius: var(--r-full);
+  /* Square-cornered, not pill-shaped: these carry status ("Analysed",
+     "Filed here", a risk level), and a rectangle reads as a label on a record
+     rather than as a button someone can press. */
+  border-radius: var(--r-sm);
   font-size: var(--fs-xs);
   font-weight: var(--fw-medium);
   border: 1px solid transparent;
@@ -213,7 +223,7 @@
 .tab .count {
   margin-left: 6px; font-size: var(--fs-xs);
   background: var(--bg-sunken); color: var(--text-muted);
-  padding: 0 6px; border-radius: var(--r-full);
+  padding: 0 6px; border-radius: var(--r-sm);
 }
 
 /* --- tables --------------------------------------------------------------- */
@@ -460,7 +470,7 @@
   flex: none;
   width: 22px; height: 22px;
   display: grid; place-items: center;
-  border-radius: var(--r-full);
+  border-radius: var(--r-sm);
   background: var(--bg-sunken);
   color: var(--text-muted);
   font-size: var(--fs-xs); font-weight: var(--fw-semi);

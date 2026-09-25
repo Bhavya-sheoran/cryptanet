@@ -75,10 +75,6 @@ export default function ContributingCases({ contributions, totalScore, total, on
         </table>
       </div>
 
-      {onOpenCase ? (
-        <p className="hint">Select any case to open its full investigation.</p>
-      ) : null}
-
       <details className="ranking-detail" style={{ marginTop: 'var(--sp-3)' }}>
         <summary>How the score is calculated</summary>
         <p className="ranking-lede">

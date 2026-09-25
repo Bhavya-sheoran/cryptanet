@@ -52,7 +52,6 @@ export default function CasesPage({ currentUser, onOpenCase }) {
     <>
       <div className="page-head">
         <div>
-          <div className="crumb">Workspace</div>
           <h1>Cases</h1>
         </div>
         <button type="button" className="btn btn-secondary" onClick={load}>Refresh</button>
@@ -116,7 +115,6 @@ export default function CasesPage({ currentUser, onOpenCase }) {
               </div>
             )}
         </div>
-        <div className="panel-foot">Select any case to open its full investigation.</div>
       </section>
     </>
   );

@@ -81,6 +81,7 @@ code, pre, .mono { font-family: var(--font-mono); font-size: 0.94em; font-varian
 /* --- left rail ------------------------------------------------------------ */
 .rail {
   grid-area: rail;
+  position: relative;   /* anchors the drag handle on its edge */
   background: var(--surface-rail);
   border-right: 1px solid var(--border);
   display: flex;
@@ -109,14 +110,17 @@ code, pre, .mono { font-family: var(--font-mono); font-size: 0.94em; font-varian
 .brand-mark.has-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
 
 .brand-text { min-width: 0; }
-.brand-name { font-size: var(--fs-md); font-weight: var(--fw-semi); line-height: 1.2; }
-.brand-sub  { font-size: var(--fs-xs); color: var(--text-subtle); }
+/* The wordmark, and the only place Orbitron is used. The fallback is the
+   normal interface stack, so a missing font file costs styling, not the name. */
+.brand-name {
+  font-family: 'Orbitron', var(--font-sans);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+}
 
 .rail-nav { display: flex; flex-direction: column; gap: 2px; }
-.rail-label {
-  font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.07em;
-  color: var(--text-subtle); padding: 0 var(--sp-2); margin-bottom: var(--sp-1);
-}
 .rail-item {
   display: flex; align-items: center; gap: var(--sp-3);
   padding: var(--sp-2) var(--sp-2);
@@ -127,19 +131,25 @@ code, pre, .mono { font-family: var(--font-mono); font-size: 0.94em; font-varian
   cursor: pointer;
   transition: background var(--transition), color var(--transition);
 }
-.rail-item:hover { background: var(--bg-sunken); color: var(--text); }
+/* Hover and selection previously used a grey and a pale blue that both sat on
+   a white rail. On a blue rail the grey reads as dirt and the pale blue
+   vanishes, so hover deepens the blue and the selected item is lifted out of
+   it in white. */
+.rail-item:hover { background: color-mix(in srgb, var(--brand-500) 16%, transparent); color: var(--text); }
 .rail-item[aria-current="page"] {
-  background: var(--accent-soft);
+  background: var(--bg-elevated);
   color: var(--accent);
+  box-shadow: var(--shadow-sm);
 }
 .rail-item .glyph { width: 18px; text-align: center; flex: none; font-size: 16px; }
 .rail-item .count {
   margin-left: auto;
   font-size: var(--fs-xs);
-  background: var(--bg-sunken);
+  /* Grey on the blue rail reads as disabled; white keeps the count legible. */
+  background: var(--bg-elevated);
   color: var(--text-muted);
   padding: 1px 7px;
-  border-radius: var(--r-full);
+  border-radius: var(--r-sm);
 }
 .rail-foot { margin-top: auto; display: flex; flex-direction: column; gap: var(--sp-3); }
 
@@ -154,6 +164,9 @@ code, pre, .mono { font-family: var(--font-mono); font-size: 0.94em; font-varian
   background: var(--surface-nav);
   border-bottom: 1px solid var(--border);
 }
+/* The search box is width-capped, so without this the officer identity sits
+   mid-bar against the search field instead of at the end of the bar. */
+.topbar-user { margin-left: auto; }
 
 .content {
   padding: var(--sp-6);
@@ -166,7 +179,6 @@ code, pre, .mono { font-family: var(--font-mono); font-size: 0.94em; font-varian
 }
 
 .page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-4); }
-.page-head .crumb { font-size: var(--fs-sm); color: var(--text-subtle); margin-bottom: 2px; }
 .page-head .lede { color: var(--text-muted); font-size: var(--fs-md); margin: var(--sp-1) 0 0; max-width: 68ch; }
 
 .app-footer {
@@ -181,16 +193,36 @@ code, pre, .mono { font-family: var(--font-mono); font-size: 0.94em; font-varian
   margin: auto auto 0;
 }
 
+/* --- resizable navigation panel ------------------------------------------- */
+/* Sits over the rail's right border, wider than it looks so it is easy to
+   grab, and invisible until pointed at or focused. */
+.rail-resizer {
+  position: absolute; top: 0; right: -3px; bottom: 0;
+  width: 7px; z-index: 5;
+  cursor: col-resize;
+  background: none; border: 0; padding: 0;
+}
+.rail-resizer:hover,
+.rail-resizer:focus-visible {
+  background: var(--accent);
+  outline: none;
+}
+/* While dragging, the cursor stays a resize arrow wherever the pointer goes
+   and text stops selecting under it. */
+body.is-resizing-rail { cursor: col-resize; user-select: none; }
+
 /* --- responsive ----------------------------------------------------------- */
 @media (max-width: 1000px) {
   .app { grid-template-columns: 1fr; grid-template-areas: "banner" "rail" "main"; }
+  /* The panel sits across the top at this width, so there is no edge to drag. */
+  .rail-resizer { display: none; }
   .rail {
     position: static; height: auto; flex-direction: row; align-items: center;
     overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--border);
     padding: var(--sp-2) var(--sp-3);
   }
   .rail-nav { flex-direction: row; }
-  .rail-label, .rail-foot { display: none; }
+  .rail-foot { display: none; }
   .content { padding: var(--sp-4); }
   .topbar { padding: 0 var(--sp-4); }
 }

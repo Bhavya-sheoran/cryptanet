@@ -100,7 +100,6 @@ export default function Investigate({ currentUser, submitted, onOpenCase }) {
     <>
       <div className="page-head">
         <div>
-          <div className="crumb">Workspace</div>
           <h1>Investigate a suspect wallet</h1>
         </div>
       </div>

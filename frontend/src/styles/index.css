@@ -1,5 +1,6 @@
 /* Entry stylesheet. Order matters: tokens define the vocabulary, base applies
    it to the document and shell, components style the parts. */
+@import './fonts.css';
 @import './tokens.css';
 @import './base.css';
 @import './components.css';

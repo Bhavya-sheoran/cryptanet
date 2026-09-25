@@ -123,9 +123,7 @@ export default function CaseWorkspace({ caseId, currentUser, targetAddress, enti
 
       {/* --- evidence --- */}
       <h4 style={{ marginTop: 'var(--sp-6)' }}>Evidence exhibits</h4>
-      {detail.evidence.length === 0 ? (
-        <p className="hint">No exhibits attached yet.</p>
-      ) : (
+      {detail.evidence.length > 0 ? (
         <div className="table-wrap">
           <table className="table">
             <thead>
@@ -142,7 +140,7 @@ export default function CaseWorkspace({ caseId, currentUser, targetAddress, enti
             </tbody>
           </table>
         </div>
-      )}
+      ) : null}
       <div className="row" style={{ marginTop: 'var(--sp-2)' }}>
         <input type="file" ref={fileRef} className="input" style={{ padding: 6 }} />
         <button

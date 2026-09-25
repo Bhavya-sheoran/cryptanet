@@ -106,17 +106,10 @@ export default function AttributionCard({ attribution, terminals, scamReports, o
         {attribution?.confidence != null ? (
           <>
             <dt>Confidence</dt>
-            <dd>
-              {confidenceWord(attribution.confidence)}
-              <div className="kv-note">
-                How strongly the evidence supports this identification.
-              </div>
-            </dd>
+            <dd>{confidenceWord(attribution.confidence)}</dd>
           </>
         ) : null}
       </dl>
-
-      {attribution?.note ? <p className="identification-note">{attribution.note}</p> : null}
 
       <dl className="kv">
         <dt>Scam reports on this wallet</dt>

@@ -1,0 +1,17 @@
+/* ==========================================================================
+   Bundled typeface
+   --------------------------------------------------------------------------
+   Orbitron is the wordmark face only - it is not a reading face, and nothing
+   else in the app should use it. The file ships with the project (see
+   public/fonts/README.md) so the mark looks the same on a machine with no
+   network.
+   ========================================================================== */
+@font-face {
+  font-family: 'Orbitron';
+  font-style: normal;
+  font-weight: 700;
+  /* `swap`: show the fallback immediately and repaint when the file lands,
+     rather than leaving the sidebar blank while it loads. */
+  font-display: swap;
+  src: url('/fonts/orbitron-700.woff2') format('woff2');
+}

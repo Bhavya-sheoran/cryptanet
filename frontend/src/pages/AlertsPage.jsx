@@ -15,7 +15,6 @@ export default function AlertsPage({ onInspect, signedIn }) {
     <>
       <div className="page-head">
         <div>
-          <div className="crumb">Workspace</div>
           <h1>Alerts</h1>
         </div>
         <span className={`badge badge-${status === 'open' ? 'ok' : status === 'connecting' ? 'warn' : 'neutral'}`}>

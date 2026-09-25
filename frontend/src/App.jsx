@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import useTheme from './components/ui/useTheme.js';
+import {
+  applyRailWidth, currentRailWidth, RAIL_DEFAULT, RAIL_WIDTH_KEY,
+} from './components/ui/railWidth.js';
 import { Toaster } from './components/ui/Toaster.jsx';
 import Investigate from './pages/Investigate.jsx';
 import CasesPage from './pages/CasesPage.jsx';
@@ -41,6 +44,71 @@ function officerName(fullName) {
  * constant here, so the UI claim about where the data came from cannot drift
  * from how the system is actually configured.
  */
+/**
+ * Drag handle on the edge of the navigation panel.
+ *
+ * The whole layout is a grid sized by --rail-w, so dragging only has to write
+ * that one variable. The chosen width is kept per browser: an officer who
+ * widens the panel should not have to do it again tomorrow. Arrow keys move it
+ * too, and a double-click restores the default - a mouse-only control would be
+ * unusable for anyone working by keyboard.
+ */
+function RailResizer() {
+  useEffect(() => {
+    try {
+      const saved = Number(window.localStorage.getItem(RAIL_WIDTH_KEY));
+      if (saved) applyRailWidth(saved);
+    } catch {
+      // Private browsing can refuse storage; the default width is fine.
+    }
+  }, []);
+
+  const remember = (px) => {
+    const width = applyRailWidth(px);
+    try {
+      window.localStorage.setItem(RAIL_WIDTH_KEY, String(width));
+    } catch {
+      // Not worth telling anyone: the panel still resized.
+    }
+  };
+
+  const onPointerDown = (event) => {
+    event.preventDefault();
+    const onMove = (e) => remember(e.clientX);
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      document.body.classList.remove('is-resizing-rail');
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    document.body.classList.add('is-resizing-rail');
+  };
+
+  const onKeyDown = (event) => {
+    const step = event.shiftKey ? 32 : 8;
+    const current = currentRailWidth();
+    if (event.key === 'ArrowLeft') remember(current - step);
+    else if (event.key === 'ArrowRight') remember(current + step);
+    else if (event.key === 'Home') remember(RAIL_DEFAULT);
+    else return;
+    event.preventDefault();
+  };
+
+  return (
+    <div
+      className="rail-resizer"
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Resize the navigation panel"
+      tabIndex={0}
+      onPointerDown={onPointerDown}
+      onKeyDown={onKeyDown}
+      onDoubleClick={() => remember(RAIL_DEFAULT)}
+    />
+  );
+}
+
 /** Candidate logo files, in order of preference. Drop one into
  *  frontend/public/ and it appears here - no code change. SVG first: it stays
  *  sharp on any screen. */
@@ -172,16 +240,15 @@ export default function App() {
     <Toaster>
       <div className="app">
         <aside className="rail">
+          <RailResizer />
           <div className="brand">
             <BrandMark />
             <div className="brand-text">
               <div className="brand-name">CRYPTANET</div>
-              <div className="brand-sub">SIH26183 · MHA</div>
             </div>
           </div>
 
           <nav className="rail-nav" aria-label="Sections">
-            <span className="rail-label">Workspace</span>
             {NAV.map((item) => (
               <button
                 key={item.id}
@@ -229,15 +296,14 @@ export default function App() {
             </form>
 
             {user ? (
-              <span className="row sm nowrap signed-in-as">
-                <span className="dot dot-ok" />
+              <span className="row sm nowrap signed-in-as topbar-user">
                 {officerName(user.full_name)}
                 <span className={`badge badge-${user.can_approve ? 'ok' : 'neutral'}`}>
                   {user.role}
                 </span>
               </span>
             ) : (
-              <span className="badge badge-neutral">Not signed in</span>
+              <span className="badge badge-neutral topbar-user">Not signed in</span>
             )}
           </header>
 

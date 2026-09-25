@@ -106,7 +106,6 @@ export default function CaseDashboard({ caseId, currentUser, onBack, onOpenCase 
 
       <div className="page-head">
         <div>
-          <div className="crumb">Case</div>
           <h1>{detail.case_number}</h1>
           <p className="lede">
             Complaint received {(detail.reported_at || '').slice(0, 10)}

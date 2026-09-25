@@ -74,7 +74,21 @@ export default function WalletInputForm({ onAnalyse, onSubmitted, busy }) {
   return (
     <form className="stack" onSubmit={file}>
       <div className="field">
-        <label className="label" htmlFor="addr">Suspect wallet address</label>
+        <div className="field-head">
+          <label className="label" htmlFor="addr">Suspect wallet address</label>
+          <span className="field-status" aria-live="polite">
+            {checking ? 'Checking the address…' : null}
+            {!checking && check && valid ? (
+              <span className="status-ok">
+                ✓ Valid {check.chain} address
+                {check.warnings?.length ? ` — ${check.warnings[0]}` : ''}
+              </span>
+            ) : null}
+            {!checking && check && !valid ? (
+              <span className="status-bad">✕ {check.reason}</span>
+            ) : null}
+          </span>
+        </div>
         <input
           id="addr"
           className={`input input-mono${check ? (valid ? ' is-valid' : ' is-invalid') : ''}`}
@@ -84,18 +98,6 @@ export default function WalletInputForm({ onAnalyse, onSubmitted, busy }) {
           autoComplete="off"
           spellCheck="false"
         />
-        <span className="field-status" aria-live="polite" style={{ minHeight: 18 }}>
-          {checking ? 'Checking the address…' : null}
-          {!checking && check && valid ? (
-            <span className="status-ok">
-              ✓ Valid {check.chain} address
-              {check.warnings?.length ? ` — ${check.warnings[0]}` : ''}
-            </span>
-          ) : null}
-          {!checking && check && !valid ? (
-            <span className="status-bad">✕ {check.reason}</span>
-          ) : null}
-        </span>
       </div>
 
       <div className="field">
@@ -109,9 +111,7 @@ export default function WalletInputForm({ onAnalyse, onSubmitted, busy }) {
           placeholder="Amount the victim lost, in rupees"
           onChange={(e) => setAmount(e.target.value)}
         />
-        <span className="hint">
-          {amountPreview ? `That is ${amountPreview}.` : 'Enter the amount in rupees.'}
-        </span>
+        {amountPreview ? <span className="hint">{`That is ${amountPreview}.`}</span> : null}
       </div>
 
       <div className="field">

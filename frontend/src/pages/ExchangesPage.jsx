@@ -29,7 +29,6 @@ export default function ExchangesPage({ signedIn }) {
     <>
       <div className="page-head">
         <div>
-          <div className="crumb">Workspace</div>
           <h1>Exchanges by fraud linkage</h1>
         </div>
         {signedIn ? (

@@ -198,7 +198,6 @@ button.destination-head:focus-visible { outline: 2px solid var(--accent); outlin
   max-width: 72ch;
   margin: 0 0 var(--sp-4);
 }
-.identification-note { font-size: var(--fs-sm); color: var(--text-muted); max-width: 72ch; }
 .kv-note {
   margin-top: var(--sp-1);
   font-size: var(--fs-sm);
@@ -293,7 +292,7 @@ button.destination-head:focus-visible { outline: 2px solid var(--accent); outlin
 .signed-in-as { color: var(--text); font-weight: var(--fw-medium); }
 .back-link { margin-bottom: var(--sp-3); }
 
-.field-status { display: block; font-size: var(--fs-sm); margin-top: var(--sp-1); }
+.field-status { font-size: var(--fs-sm); }
 .status-ok { color: var(--ok-700); font-weight: var(--fw-medium); }
 .status-bad { color: var(--dang-700); font-weight: var(--fw-medium); }
 
