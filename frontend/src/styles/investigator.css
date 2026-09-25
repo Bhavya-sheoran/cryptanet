@@ -308,3 +308,6 @@ button.destination-head:focus-visible { outline: 2px solid var(--accent); outlin
   .route-step-n { min-width: 100%; }
   .destination-name { font-size: var(--fs-xl); }
 }
+
+/* Chainabuse reports against the reported wallet: stated, not shouted. */
+.scam-reports-hit { color: var(--dang-700, #a52a1f); font-weight: var(--fw-bold); }

@@ -218,6 +218,7 @@ export default function CaseDashboard({ caseId, currentUser, onBack, onOpenCase 
               <AttributionCard
                 attribution={analysis.attribution}
                 terminals={analysis.terminal_attributions}
+                scamReports={analysis.scam_reports}
                 onSelectAddress={setSelected}
               />
             ) : (

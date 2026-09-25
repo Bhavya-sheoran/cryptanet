@@ -70,8 +70,8 @@ describe('alert socket URL', () => {
   });
 
   it('follows the host it is served from, not a hardcoded one', async () => {
-    const client = await loadClient({ protocol: 'https:', host: 'chaintrace.example.gov.in' });
-    expect(client.WS_URL).toContain('chaintrace.example.gov.in');
+    const client = await loadClient({ protocol: 'https:', host: 'cryptanet.example.gov.in' });
+    expect(client.WS_URL).toContain('cryptanet.example.gov.in');
   });
 
   it('honours an explicit override', async () => {

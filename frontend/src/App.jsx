@@ -41,6 +41,30 @@ function officerName(fullName) {
  * constant here, so the UI claim about where the data came from cannot drift
  * from how the system is actually configured.
  */
+/** Candidate logo files, in order of preference. Drop one into
+ *  frontend/public/ and it appears here - no code change. SVG first: it stays
+ *  sharp on any screen. */
+const LOGO_SOURCES = ['/logo.svg', '/logo.png', '/logo.jpg'];
+
+/**
+ * The project logo, falling back to the "CN" monogram.
+ *
+ * The fallback is not decoration: with no logo file the <img> would render as
+ * a broken-image icon in the corner of every screen, which looks like a fault
+ * in the app rather than a missing file.
+ */
+function BrandMark() {
+  const [index, setIndex] = useState(0);
+  const src = LOGO_SOURCES[index];
+
+  if (!src) return <div className="brand-mark" aria-hidden="true">CN</div>;
+  return (
+    <div className="brand-mark has-logo">
+      <img src={src} alt="CRYPTANET" onError={() => setIndex(index + 1)} />
+    </div>
+  );
+}
+
 export default function App() {
   const { theme, toggle } = useTheme();
   const [readiness, setReadiness] = useState(null);
@@ -149,9 +173,9 @@ export default function App() {
       <div className="app">
         <aside className="rail">
           <div className="brand">
-            <div className="brand-mark" aria-hidden="true">CT</div>
+            <BrandMark />
             <div className="brand-text">
-              <div className="brand-name">ChainTrace</div>
+              <div className="brand-name">CRYPTANET</div>
               <div className="brand-sub">SIH26183 · MHA</div>
             </div>
           </div>

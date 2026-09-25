@@ -1,0 +1,1113 @@
+{
+ "source_url": "https://www.binance.com/bapi/apex/v1/public/apex/market/por/address",
+ "fetched_at": "2026-09-22T16:11:25.783481+00:00",
+ "tags": [
+  {
+   "chain": "BTC",
+   "address_norm": "12VuUfQHTGqWDvBzm8TBad1mZBm4hjGEzN",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "1DEuKerATHWRfyB14s6QCt4LPkfCTx4zaW",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "1KuPikhUYtHz3fmSQ2UvotpUuN672NuEcm",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "1PJiGp2yDLvUgqeBsuZVCBADArNsk6XEiw",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "1PPWMe42cywnM61nVatkmiggwdRQYLiCyS",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "1Pzaqw98PeRfyHypfqyEgg5yycJRsENrE7",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "31jUs8yQNVc9p6YuUPctWCkdhH7u8UiUba",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "32BgTv3NSYbMsBTwDbNNN2GKZPCTJSkqDv",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "32KqbtrRVxC6GLUJgJhVQtFTaCdq4GrgBb",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "32bhzEniykYRFADVaRM5PYswsjC23cxtes",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "34HpHYiyQwg69gFmCq2BGHjF1DZnZnBeBP",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "34ryUknRsda7w9yXqzjLhgRPZLPV43rpsd",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "34xp4vRoCGJym3xR7yCVPFHoCNxv4Twseo",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "36BddqksxL9RctZ8D8aFxKRFEbqPnEiDc6",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "36oiSkAi1VVuUpfdv8E2V5fZ2EarHRJpis",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "378GLcve92X2Q4UrCyoMFDL5k5QrzeG7JN",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "395vnFScKQ1ay695C6v7gf89UzoFpx3WuJ",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "39884E3j6KZj82FK4vcCrkUvWYL5MQaS3v",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "39CnKMu9KWvFAabLJ5BYghVfSqHgC2VShe",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3AQ8bAh88TQU7JV1H3ovXrwsuV6s3zYZuN",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3AeUiDpPPUrUBS377584sFCpx8KLfpX9Ry",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3AtnehKDkFPC1bKvdrEVPSRGCtxQH8F1R8",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3BzYxZXkdpkrFTWzKkWGRoWXJMuN2Ko621",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3CySuFKbBS29M7rE5iJakZRNqb3msMeFoN",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3E97AjYaCq9QYnfFMtBCYiCEsN956Rvpj2",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3EVVc8e2rxwUuERtdJCduWig8DnpsUqyA6",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3F1ZmTDAv6q3xrnT3tpm55DkCDzxhstU2Z",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3F9CGMu7JSJnMHA8jFM2KgxuH6hhxtvENP",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3FHNBLobJnbCTFTVakh5TXmEneyf5PT61B",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3FJ9hQuRtzy7pCqKHjeBGRDcY3fJbhHYXD",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3GdMytxx7d2b5ERwWmQttBWtKJmS8bjGj9",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3HdGoUTbcztBnS7UzY4vSPYhwr424CiWAA",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3HkPQSi1xso1Zh1EeqLjkMpura63fr5HRn",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3HkgC2R5PhqyXy6RVFyemvxN1VuFbQiQ5V",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3JFJPpH8Chwo7CDbyYQ4XcfgcjEP1FGRMJ",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3JqPhvKkAPcFB3oLELBT7z2tQdjpnxuDi9",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3KRduELtTmxBtqYpZviPysXoJDxdtdxFLZ",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3Kyo49ThRZPMukuYqPgqPejYeUpHvkA1EM",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3LQUu4v9z6KNch71j7kbj8GPeAGUo1FW6a",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3LcgLHzTvjLKBixBvkKGiadtiw2GBSKKqH",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3M219KR5vEneNb47ewrPfWyb5jQ2DjxRP6",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3M3EtJGx5Dy9nCATLDhyRCrKGc38QC9z2e",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3NPL82eaehTFh4r3StpHqVQBTnZJFaGsyy",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3NXCvmLGz9SxYi6TnjbBQfQMcwiZ1iQETa",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3NjHh71XgjikBoTNYdWgXiNeZcLaKNThgb",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3Nm3c4gqVmvCmeP1sYvDchbb1r4QMu6emn",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3PXBET2GrTwCamkeDzKCx8DeGDyrbuGKoc",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3Q6ZCgJ3e4shasccLHen1VNUpReZTsjmsR",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "3QK5vQ9hucSg8ZC8Vizq83qEWeHFLAWMud",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "bc1p7x4aaws8t8cmmccu39kun6cajglx6ntuta7lhyxjt2cwrw4k89zqn0wley",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "bc1q32lyrhp9zpww22phqjwwmelta0c8a5q990ghs6",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet, held by custodian Ceffu (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "bc1q5n5dy7jgqhmpnmx44d3780qefzaphjreds0z9y",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "bc1q5qvs2dzzydqt4ygfn0k0ertjnv8ctytgcdz7l0",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "bc1q5rsc4uscnmemlwru8xsys26k3xgxewqfnf3k7j",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "bc1q78ufzeu8w8fwvxuphrdlg446xhyptf28fkatu5",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet, held by custodian Ceffu (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "bc1q7t9fxfaakmtk8pj7tdxjvwsng6y9x76czuaf5h",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "bc1q9n7j6a5wwru6tad9xrlncnagresvyjt96pl3en",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "bc1qdtmav38lca8yu3rrcknnqx5242cckgxqws7m72",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "bc1qm34lsc65zpw79lxes69zkqmk6ee3ewf0j77s3h",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "bc1qq393eyjh8hdjvcchy0mxquhh9wx8h3kzlkchfs",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet, held by custodian Ceffu (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "BTC",
+   "address_norm": "bc1qquax5zzensg9mkejdgq3q3h76v34cug96zk0f6",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0x030e37ddd7df1b43db172b23916d523f1599c6cb",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0x18e226459ccf0eec276514a4fd3b226d8961e4d1",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0x1b46970cfe6a271e884f636663c257a5a571fb2c",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0x21a31ee1afc51d94c2efccaa2092ad1028285549",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0x22132139bf7f3921b1cadeab931f4fbf7bf2bc9e",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0x26bff98f6f37c8d560684eaf2afd1149bf76633e",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0x28c6c06298d514db089934071355e5743bf21d60",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0x308a2a0712570daeea77c8ba9c27a32cdc4000d4",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0x32e11a20337ebc79abd0eeab2d91bafbd9591149",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0x38aaef3782910bdd9ea3566c839788af6ff9b200",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0x3a3c006053a9b40286b9951a11be4c5808c11dc8",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet, held by custodian Ceffu (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0x43684d03d81d3a4c70da68febdd61029d426f042",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0x4976a4a02f38326660d17bf34b431dc6e2eb2327",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0x4a9e49a45a4b2545cb177f79c7381a30e1dc261f",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet, held by custodian Ceffu (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0x4aec0e98fc1fb55b9cc2faaa7a81acca42cb4e96",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0x4ed6cf63bd9c009d247ee51224fc1c7041f517f1",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0x4fdfe365436b5273a42f135c6a6244a20404271e",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0x56eddb7aa87536c09ccc2793473599fd21a8b17f",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0x5a52e96bacdabb82fd05763e25335261b270efcb",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0x71a7de1bdad3904b312717843597f549d2a79eb8",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet, held by custodian Ceffu (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0x756b86fd69914db92229c07c7393d7d9948fed33",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0x835678a611b28684005a5e2233695fb6cbbb0007",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0x86523c87c8ec98c7539e2c58cd813ee9d1a08d96",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0x87433fec6f8d9df13d1e17c4b11364ecd2e93a51",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0x9696f59e4d72e237be84ffd425dcad154bf96976",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0x98adef6f2ac8572ec48965509d69a8dd5e8bba9d",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0xa64b436964e7415c0e70b9989a53e1fb9a90e726",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0xa7c0d36c4698981fab42a7d8c783674c6fe2592d",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0xad354cfbaa4a8572dd6df021514a3931a8329ef5",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0xb93b82f33e2653b544e046128f3cb47879dc917b",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet, held by custodian Ceffu (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0xbe0eb53f46cd790cd13851d5eff43d12404d33e8",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0xc8daf809c7d7c27dd62d006196d8901ba57e5eae",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0xd3a22590f8243f8e83ac230d1842c9af0404c4a1",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet, held by custodian Ceffu (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0xdfd5293d8e347dfe59e90efd55b2956a1343963d",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0xe1940f578743367f38d3f25c2d2d32d6636929b6",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0xee7ae85f2fe2239e27d9c1e23fffe168d63b4055",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "ETH",
+   "address_norm": "0xf977814e90da44bfa03b6295a0616a897441acec",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "TRON",
+   "address_norm": "TAzsQ9Gx8eqFNFSKbeXrbi45CuVPHzA8wr",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "TRON",
+   "address_norm": "TCEn8ogRSiqdqv26UhsJmQQemrgJS56ZBD",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "TRON",
+   "address_norm": "TCLgK89AnXbC9rewvhNb9UgXCc2qJJpBXh",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "TRON",
+   "address_norm": "TDqSquXBgUCLYvYC4XZgrprLK589dkhSCf",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "TRON",
+   "address_norm": "TG7dDrtoG5MnLGyAJRep67oQcS4fsA6bwP",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "TRON",
+   "address_norm": "TGoMnnRBeajEPEr1koNZv1x2XxAdWKjMWT",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "TRON",
+   "address_norm": "THA53Hni9LtCeNs5AEeY45snQG4S5XMqqQ",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "TRON",
+   "address_norm": "THFYbF3MFFJuxwVMRx3VyGrGKfqmeisumF",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "TRON",
+   "address_norm": "TJ5usJLLwjwn7Pw3TPbdzreG7dvgKzfQ5y",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "TRON",
+   "address_norm": "TJCo98saj6WND61g1uuKwJ9GMWMT9WkJFo",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "TRON",
+   "address_norm": "TJDENsfBJs4RFETt1X1W8wMDc8M5XnJhCe",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "TRON",
+   "address_norm": "TJqwA7SoZnERE4zW5uDEiPkbz4B66h9TFj",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "TRON",
+   "address_norm": "TK4ykR48cQQoyFcZ5N4xZCbsBaHcg6n3gJ",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "TRON",
+   "address_norm": "TKoMMAMrDCUY212N6M4pzmYABtgkgo7XZn",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet, held by custodian Ceffu (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "TRON",
+   "address_norm": "TMuA6YqfCeX8EhbfYEg5y7S4DqzSJireY9",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "TRON",
+   "address_norm": "TMwf7KT8CCdUKuZfKNPTTjbYkFb3eGRbzY",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "TRON",
+   "address_norm": "TNDS4epCYNabWfA8RMax9BGXeUMWJcFbtN",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "TRON",
+   "address_norm": "TNXoiAJ3dct8Fjg4M9fkLFh9S2v9TXc32G",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "TRON",
+   "address_norm": "TPtW5TEHhouj6KGshVu5ZQSKZA48QPBnXG",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "TRON",
+   "address_norm": "TQq26fUorctUZvrAgKg8Wz6QyYHvYd6xWK",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet, held by custodian Ceffu (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "TRON",
+   "address_norm": "TQrY8tryqsYVCYS3MFbtffiPp2ccyn4STm",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "TRON",
+   "address_norm": "TRGCqsUXeynKTgynp2j9g3sg7Nux2KtB3u",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "TRON",
+   "address_norm": "TVGDpgtCs45PJE7ZMHhiC76L3v77qAwJW9",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet, held by custodian Ceffu (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "TRON",
+   "address_norm": "TWd4WrZ9wn84f5x1hZhL4DHvk738ns5jwb",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  },
+  {
+   "chain": "TRON",
+   "address_norm": "TYASr5UV6HEcXatwdFQfmLVUqQQQMUxHLS",
+   "entity_name": "Binance",
+   "entity_type": "exchange",
+   "label": "Binance reserve wallet (Proof of Reserves)",
+   "source": "binance_por",
+   "confidence": 1.0
+  }
+ ]
+}

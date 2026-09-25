@@ -188,8 +188,20 @@ def parse_synthetic(path: Path) -> list[dict]:
     return out
 
 
+def parse_binance_por(path: Path) -> list[dict]:
+    """Binance's own Proof-of-Reserves wallet list, as saved by
+    scripts/sync_binance_por.py. Already in tag form."""
+    if not path.exists():
+        return []
+    return list(json.loads(path.read_text(encoding="utf-8")).get("tags") or [])
+
+
 def collect(seeds: Path) -> list[dict]:
     tags: list[dict] = []
+
+    por = parse_binance_por(seeds / "binance_por.json")
+    print(f"  binance_por.json -> {len(por)} tags")
+    tags += por
 
     ofac = parse_ofac(seeds / "ofac_sdn_addresses.json")
     print(f"  ofac_sdn_addresses.json -> {len(ofac)} tags")

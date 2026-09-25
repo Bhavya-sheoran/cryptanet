@@ -1,4 +1,4 @@
-# SIH26183 — Real-Time Identification of Fraud-Linked Cryptocurrency Exchanges
+# CRYPTANET — SIH26183 Real-Time Identification of Fraud-Linked Cryptocurrency Exchanges
 
 Prototype for Smart India Hackathon 2026, Problem Statement **SIH26183**
 (Ministry of Home Affairs · Blockchain & Cybersecurity).

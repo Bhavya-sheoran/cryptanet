@@ -206,6 +206,7 @@ export default function Investigate({ currentUser, submitted, onOpenCase }) {
                 <AttributionCard
                   attribution={analysis.attribution}
                   terminals={analysis.terminal_attributions}
+                  scamReports={analysis.scam_reports}
                   onSelectAddress={setSelected}
                 />
               </div>

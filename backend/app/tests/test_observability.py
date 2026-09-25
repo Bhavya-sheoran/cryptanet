@@ -194,5 +194,5 @@ def test_two_different_ids_produce_one_series():
 def test_metrics_use_a_dedicated_registry():
     """Keeps our deliberate metrics apart from whatever a library registers."""
     names = {m.name for m in metrics.REGISTRY.collect()}
-    assert any(n.startswith("chaintrace_") for n in names)
+    assert any(n.startswith("cryptanet_") for n in names)
     assert not any(n.startswith("python_gc") for n in names)

@@ -51,5 +51,12 @@ class WalletAnalysisResponse(BaseModel):
     listing_limit: int = Field(
         0, description="The cap applied to the case lists in this response."
     )
+    # --- external evidence ----------------------------------------------------
+    scam_reports: dict = Field(
+        default_factory=lambda: {"status": "not_configured"},
+        description="Chainabuse reports filed against the suspect wallet. `status` "
+        "is not_configured | unavailable | checked - never 'none found' unless checked.",
+    )
+
     data_provenance: str
     notice: str

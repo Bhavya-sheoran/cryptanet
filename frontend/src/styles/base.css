@@ -103,6 +103,11 @@ code, pre, .mono { font-family: var(--font-mono); font-size: 0.94em; font-varian
   font-weight: var(--fw-bold); font-size: var(--fs-sm); letter-spacing: -0.02em;
   box-shadow: var(--shadow-sm);
 }
+/* A real logo supplies its own shape and colour, so the placeholder tile's
+   gradient and shadow would only frame it. */
+.brand-mark.has-logo { background: none; box-shadow: none; overflow: hidden; }
+.brand-mark.has-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+
 .brand-text { min-width: 0; }
 .brand-name { font-size: var(--fs-md); font-weight: var(--fw-semi); line-height: 1.2; }
 .brand-sub  { font-size: var(--fs-xs); color: var(--text-subtle); }

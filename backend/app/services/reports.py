@@ -240,6 +240,30 @@ def _route_of(exposure: dict) -> dict | None:
     }
 
 
+def _scam_report_line(summary: dict | None) -> str:
+    """One case-file line for the Chainabuse screening of the reported wallet.
+
+    "Not checked" is stated as such. Printing "0 reports" when the lookup never
+    ran would put a false negative in evidence.
+    """
+    status = (summary or {}).get("status")
+    if status == "checked":
+        n = summary.get("report_count", 0)
+        if not n:
+            return "checked - no reports filed against this wallet"
+        top = list((summary.get("categories") or {}).items())[:4]
+        cats = ", ".join(f"{k} ({v})" for k, v in top)
+        verified = summary.get("verified_reports", 0)
+        return (
+            f"{n} report(s) filed against this wallet"
+            + (f", {verified} verified by Chainabuse" if verified else "")
+            + (f" - {cats}" if cats else "")
+        )
+    if status == "unavailable":
+        return "not checked - Chainabuse did not respond"
+    return "not checked - no Chainabuse API key configured"
+
+
 def generate_case_report(
     db: Session, case: Case, generated_by: User | None = None, analysis: dict | None = None
 ) -> Report:
@@ -372,6 +396,7 @@ def generate_case_report(
     sanctioned = entity_type == "sanctioned" or "sdn" in factor_text
     pdf.kv("Sanctions screening", "MATCH - destination on the OFAC SDN list" if sanctioned
            else "no match against the loaded sanctions list")
+    pdf.kv("Scam reports (Chainabuse)", _scam_report_line((analysis or {}).get("scam_reports")))
     pdf.para(
         "Screening is against the public sanctions and mixer labels loaded into this system. "
         "A 'no match' means nothing matched those lists, not that the funds are clean.",

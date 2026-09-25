@@ -11,6 +11,10 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: sih183-postgres
+    # Comes back on its own after a Docker Desktop restart or a lost file
+    # mount. Without this the container stays down until someone runs a
+    # command, which looked like "the UI is broken".
+    restart: unless-stopped
     environment:
       POSTGRES_USER: sih
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sihdev}
@@ -35,6 +39,10 @@ services:
   neo4j:
     image: neo4j:5.26-community
     container_name: sih183-neo4j
+    # Comes back on its own after a Docker Desktop restart or a lost file
+    # mount. Without this the container stays down until someone runs a
+    # command, which looked like "the UI is broken".
+    restart: unless-stopped
     # The official image runs its server as root by default. Its own `neo4j`
     # user (7474) already owns /data and /logs, so pinning it here costs
     # nothing and means a compromise of the database process is not a
@@ -70,6 +78,10 @@ services:
   redis:
     image: redis:7-alpine
     container_name: sih183-redis
+    # Comes back on its own after a Docker Desktop restart or a lost file
+    # mount. Without this the container stays down until someone runs a
+    # command, which looked like "the UI is broken".
+    restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]
     ports:
       - "127.0.0.1:${REDIS_PORT:-6380}:6379"   # this machine only - see postgres
@@ -85,6 +97,10 @@ services:
     build:
       context: ./backend
     container_name: sih183-backend
+    # Comes back on its own after a Docker Desktop restart or a lost file
+    # mount. Without this the container stays down until someone runs a
+    # command, which looked like "the UI is broken".
+    restart: unless-stopped
     env_file:
       - path: .env
         required: false
@@ -163,6 +179,10 @@ services:
     build:
       context: ./frontend
     container_name: sih183-frontend
+    # Comes back on its own after a Docker Desktop restart or a lost file
+    # mount. Without this the container stays down until someone runs a
+    # command, which looked like "the UI is broken".
+    restart: unless-stopped
     environment:
       # Empty means same-origin: the dashboard calls /api/v1/... relatively.
       # Direct access on 5174 works because Vite proxies /api to the backend

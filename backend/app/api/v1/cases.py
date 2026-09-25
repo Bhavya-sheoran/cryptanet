@@ -336,6 +336,17 @@ def generate_report(
         except Exception:  # noqa: BLE001 - a report without analysis is still useful
             analysis = None
 
+        # Chainabuse screening of the reported wallet, for the case file.
+        # Independent of the analysis above: it needs neither the graph nor
+        # the risk model, so it is recorded even when those failed.
+        try:
+            from app.services import external_intel
+
+            scam_reports = external_intel.chainabuse_reports(wallet_row.chain, wallet_row.address)
+            analysis = {**(analysis or {}), "scam_reports": scam_reports}
+        except Exception:  # noqa: BLE001
+            logger.warning("Chainabuse screening skipped for %s", case.case_number, exc_info=True)
+
         # The route the money took, for the money-flow section. Kept in its own
         # try: a failed exposure lookup should cost the report that one section,
         # not the attribution and risk that already succeeded.

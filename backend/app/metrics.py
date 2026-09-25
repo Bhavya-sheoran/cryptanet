@@ -24,14 +24,14 @@ from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram
 REGISTRY = CollectorRegistry()
 
 http_requests_total = Counter(
-    "chaintrace_http_requests_total",
+    "cryptanet_http_requests_total",
     "HTTP requests handled.",
     ["method", "endpoint", "status"],
     registry=REGISTRY,
 )
 
 http_request_duration_seconds = Histogram(
-    "chaintrace_http_request_duration_seconds",
+    "cryptanet_http_request_duration_seconds",
     "HTTP request duration.",
     ["method", "endpoint"],
     # Tuned to this application rather than left at the library defaults. A
@@ -42,21 +42,21 @@ http_request_duration_seconds = Histogram(
 )
 
 upstream_calls_total = Counter(
-    "chaintrace_upstream_calls_total",
+    "cryptanet_upstream_calls_total",
     "Calls made to external blockchain indexers. This is the rate-limited quota.",
     ["source"],
     registry=REGISTRY,
 )
 
 indexer_errors_total = Counter(
-    "chaintrace_indexer_errors_total",
+    "cryptanet_indexer_errors_total",
     "Failed calls to external indexers. Degrades traces silently, so alert on it.",
     ["source"],
     registry=REGISTRY,
 )
 
 trace_duration_seconds = Histogram(
-    "chaintrace_trace_duration_seconds",
+    "cryptanet_trace_duration_seconds",
     "End-to-end wallet trace duration.",
     ["chain"],
     buckets=(0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0),
@@ -64,28 +64,28 @@ trace_duration_seconds = Histogram(
 )
 
 traces_total = Counter(
-    "chaintrace_traces_total",
+    "cryptanet_traces_total",
     "Wallet traces run, by chain and completeness.",
     ["chain", "complete"],
     registry=REGISTRY,
 )
 
 alerts_published_total = Counter(
-    "chaintrace_alerts_published_total",
+    "cryptanet_alerts_published_total",
     "Alerts pushed onto the Redis stream.",
     ["severity"],
     registry=REGISTRY,
 )
 
 datastore_up = Gauge(
-    "chaintrace_datastore_up",
+    "cryptanet_datastore_up",
     "1 when the datastore answered its last health check, 0 when it did not.",
     ["datastore"],
     registry=REGISTRY,
 )
 
 model_available = Gauge(
-    "chaintrace_illicit_model_available",
+    "cryptanet_illicit_model_available",
     "1 when the illicit-transaction classifier is loaded and serving.",
     registry=REGISTRY,
 )

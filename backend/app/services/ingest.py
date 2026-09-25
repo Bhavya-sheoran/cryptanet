@@ -507,6 +507,29 @@ def intake_wallet(
             touched.update(normalize_address(chain, a) for a in tx.output_addresses)
 
         trace.mixer_interaction = detect_mixer_interaction(info.chain, touched)
+
+        # Where the trail ended at a wallet nobody has labelled, ask Arkham who
+        # it belongs to. Dead ends are where an unknown label costs the most -
+        # money that "went nowhere" may simply have reached a service the tag
+        # database does not cover. Bounded in count and time (intake is
+        # waited on) and skipped entirely without a key.
+        try:
+            from app.services import external_intel
+            from app.services import tracing as tracing_svc
+
+            if external_intel.arkham_enabled():
+                sinks = [
+                    s["address"]
+                    for s in tracing_svc.sink_addresses(info.chain, info.address_norm, depth=8)
+                ]
+                untagged = sorted(set(sinks) - _custodial_addresses(info.chain, sinks))
+                hits = external_intel.enrich_with_arkham(info.chain, untagged)
+                if hits:
+                    logger.info("Arkham identified %d trail endpoint(s) for %s",
+                                hits, info.address_norm)
+        except Exception:  # noqa: BLE001 - enrichment must never fail an intake
+            logger.warning("Arkham enrichment skipped", exc_info=True)
+
         trace.hops_discovered = expansion["hops_discovered"]
         trace.addresses_touched = expansion["addresses_touched"]
         # "complete" here means the run finished without error, which is what

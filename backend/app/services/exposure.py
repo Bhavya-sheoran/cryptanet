@@ -532,6 +532,9 @@ WEIGHTS = {
 #: a community tagpack is a best effort.
 SOURCE_TRUST = {
     "ofac_sdn": 1.0,
+    # The exchange's own published reserve list: it asserts ownership itself.
+    "binance_por": 1.0,
+    "arkham": 0.85,
     "graphsense_ofac": 0.95,
     "etherscan_labels": 0.9,
     "walletexplorer": 0.85,

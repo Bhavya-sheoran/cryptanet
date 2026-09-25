@@ -14,6 +14,10 @@ const METHOD = {
     badge: 'Identified from records',
     tone: 'ok',
   },
+  arkham: {
+    badge: 'Identified by Arkham Intelligence',
+    tone: 'ok',
+  },
   classifier: {
     badge: 'Suggested from behaviour',
     tone: 'warn',
@@ -26,7 +30,31 @@ const METHOD = {
 
 const TYPE_TONE = { mixer: 'mixer', sanctioned: 'danger' };
 
-export default function AttributionCard({ attribution, terminals, onSelectAddress }) {
+/** Tag sources by the name an officer would recognise and could cite. */
+const SOURCE_NAMES = {
+  binance_por: 'Binance Proof of Reserves',
+  arkham: 'Arkham Intelligence',
+  ofac_sdn: 'OFAC sanctions list',
+  graphsense_ofac: 'OFAC sanctions list (GraphSense)',
+  etherscan_labels: 'Etherscan labels',
+  walletexplorer: 'WalletExplorer',
+  graphsense_tagpacks: 'GraphSense tag packs',
+  behavioural_classifier: 'Behaviour analysis',
+  synthetic: 'Synthetic demo data',
+};
+
+/** Chainabuse screening of the reported wallet, as one line. */
+function scamReportText(summary) {
+  if (!summary || summary.status === 'not_configured') return 'Not checked (Chainabuse key not set)';
+  if (summary.status === 'unavailable') return 'Not checked (Chainabuse did not respond)';
+  const n = summary.report_count || 0;
+  if (n === 0) return 'No reports filed';
+  const cats = Object.keys(summary.categories || {}).slice(0, 3).join(', ');
+  const verified = summary.verified_reports ? ` · ${summary.verified_reports} verified` : '';
+  return `${countOf(n, 'report')}${verified}${cats ? ` · ${cats}` : ''}`;
+}
+
+export default function AttributionCard({ attribution, terminals, scamReports, onSelectAddress }) {
   const method = attribution?.method || 'none';
   const copy = METHOD[method] || METHOD.none;
   const clusterSize = attribution?.cluster_size;
@@ -53,7 +81,7 @@ export default function AttributionCard({ attribution, terminals, onSelectAddres
         {attribution?.source ? (
           <>
             <dt>Where this came from</dt>
-            <dd>{attribution.source.replace(/_/g, ' ')}</dd>
+            <dd>{SOURCE_NAMES[attribution.source] || attribution.source.replace(/_/g, ' ')}</dd>
           </>
         ) : null}
         {clusterSize ? (
@@ -89,6 +117,19 @@ export default function AttributionCard({ attribution, terminals, onSelectAddres
       </dl>
 
       {attribution?.note ? <p className="identification-note">{attribution.note}</p> : null}
+
+      <dl className="kv">
+        <dt>Scam reports on this wallet</dt>
+        <dd className={scamReports?.report_count ? 'scam-reports-hit' : undefined}>
+          {scamReportText(scamReports)}
+          {scamReports?.status === 'checked' && scamReports.url ? (
+            <>
+              {' '}
+              <a href={scamReports.url} target="_blank" rel="noreferrer noopener">View on Chainabuse</a>
+            </>
+          ) : null}
+        </dd>
+      </dl>
 
       {terminals && terminals.length > 0 ? (
         <div className="reached-block">
@@ -147,6 +188,15 @@ AttributionCard.propTypes = {
     note: PropTypes.string,
   }),
   terminals: PropTypes.arrayOf(PropTypes.object),
+  scamReports: PropTypes.shape({
+    status: PropTypes.string,
+    report_count: PropTypes.number,
+    verified_reports: PropTypes.number,
+    categories: PropTypes.object,
+    url: PropTypes.string,
+  }),
   onSelectAddress: PropTypes.func,
 };
-AttributionCard.defaultProps = { attribution: null, terminals: [], onSelectAddress: undefined };
+AttributionCard.defaultProps = {
+  attribution: null, terminals: [], scamReports: null, onSelectAddress: undefined,
+};

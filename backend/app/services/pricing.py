@@ -40,6 +40,19 @@ settings = get_settings()
 COINGECKO_BASE = "https://api.coingecko.com/api/v3"
 _TIMEOUT = httpx.Timeout(12.0, connect=6.0)
 
+#: WazirX, an Indian exchange, is the first price source. It quotes these
+#: assets directly in rupees - the unit the case file uses - so there is no
+#: USD/INR conversion step to add its own error, and its public API needs no
+#: key. CoinGecko remains the fallback for anything WazirX cannot price.
+WAZIRX_BASE = "https://api.wazirx.com/sapi/v1"
+WAZIRX_SYMBOLS = {
+    "bitcoin": "btcinr",
+    "ethereum": "ethinr",
+    "tron": "trxinr",
+    "tether": "usdtinr",
+    "usd-coin": "usdcinr",
+}
+
 #: Cache prices for a day. Historical prices never change; current prices move,
 #: but not enough to alter a ranking within a day.
 CACHE_TTL_SECONDS = 86400
@@ -113,7 +126,101 @@ def _cache_put(key: str, quote: PriceQuote) -> None:
         logger.debug("price cache write failed; continuing without cache")
 
 
+def _wazirx_pacer():
+    # WazirX answers a second request inside about a second with "Too many api
+    # request". One shared pacer spaces every WazirX call in this process.
+    from app.services.connectors.live import _Pacer
+
+    global _WAZIRX_PACER
+    if _WAZIRX_PACER is None:
+        _WAZIRX_PACER = _Pacer(rate=0.8)
+    return _WAZIRX_PACER
+
+
+_WAZIRX_PACER = None
+
+#: Every WazirX market's last price, from one call, reused briefly. Asking per
+#: symbol spent one rate-limited request per coin and still drew 429s; the
+#: all-markets endpoint answers every spot quote an analysis needs at once.
+_WAZIRX_TICKERS: dict = {"at": 0.0, "prices": {}}
+WAZIRX_TICKER_TTL_SECONDS = 60
+
+
+def _wazirx_spot(client: httpx.Client, symbol: str) -> float | None:
+    import threading
+    import time as _time
+
+    global _WAZIRX_LOCK
+    if _WAZIRX_LOCK is None:
+        _WAZIRX_LOCK = threading.Lock()
+    with _WAZIRX_LOCK:
+        if _time.monotonic() - _WAZIRX_TICKERS["at"] > WAZIRX_TICKER_TTL_SECONDS:
+            _wazirx_pacer().wait()
+            resp = client.get(f"{WAZIRX_BASE}/tickers/24hr")
+            resp.raise_for_status()
+            _WAZIRX_TICKERS["prices"] = {
+                t["symbol"]: t.get("lastPrice")
+                for t in resp.json()
+                if isinstance(t, dict) and t.get("symbol")
+            }
+            _WAZIRX_TICKERS["at"] = _time.monotonic()
+        last = _WAZIRX_TICKERS["prices"].get(symbol)
+    return float(last) if last else None
+
+
+_WAZIRX_LOCK = None
+
+
+def _fetch_wazirx(coin_id: str, at: datetime | None) -> tuple[float, str, str] | None:
+    """Return (inr, source, as_of) from WazirX's public INR markets, or None.
+
+    Recent or unspecified times use the market's last trade price. Older
+    transfers use the daily closing price for the day the money moved, from
+    WazirX's own daily candles - the same "price on the day" rule as the
+    CoinGecko path, but already in rupees.
+    """
+    symbol = WAZIRX_SYMBOLS.get(coin_id)
+    if symbol is None:
+        return None
+    try:
+        with httpx.Client(timeout=_TIMEOUT) as client:
+            if at is not None and (datetime.now(UTC) - at) > timedelta(days=1):
+                _wazirx_pacer().wait()
+                day_start = int(datetime(at.year, at.month, at.day, tzinfo=UTC).timestamp())
+                resp = client.get(
+                    f"{WAZIRX_BASE}/klines",
+                    params={"symbol": symbol, "interval": "1d", "startTime": day_start, "limit": 1},
+                )
+                resp.raise_for_status()
+                candles = resp.json()
+                # [open_time_seconds, open, high, low, close, volume]
+                if isinstance(candles, list) and candles and len(candles[0]) >= 5:
+                    opened = int(candles[0][0])
+                    # Only accept the candle for the day asked about; WazirX
+                    # returns the next available day when a market was quiet.
+                    if abs(opened - day_start) < 86400:
+                        return float(candles[0][4]), "wazirx_daily_close", at.date().isoformat()
+                return None
+
+            last = _wazirx_spot(client, symbol)
+            if last:
+                return last, "wazirx_spot", datetime.now(UTC).isoformat()
+    except httpx.HTTPError as exc:
+        logger.warning("WazirX price lookup failed for %s: %s", coin_id, exc)
+    except (ValueError, KeyError, TypeError, IndexError) as exc:
+        logger.warning("unexpected WazirX payload for %s: %s", coin_id, exc)
+    return None
+
+
 def _fetch_live(coin_id: str, at: datetime | None) -> tuple[float, str, str] | None:
+    """Return (inr, source, as_of) from WazirX, falling back to CoinGecko."""
+    quoted = _fetch_wazirx(coin_id, at)
+    if quoted is not None:
+        return quoted
+    return _fetch_coingecko(coin_id, at)
+
+
+def _fetch_coingecko(coin_id: str, at: datetime | None) -> tuple[float, str, str] | None:
     """Return (inr, source, as_of) from CoinGecko, or None."""
     try:
         with httpx.Client(timeout=_TIMEOUT) as client:

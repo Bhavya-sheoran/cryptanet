@@ -28,6 +28,7 @@ from app.db.neo4j import get_driver
 logger = logging.getLogger(__name__)
 
 METHOD_TAGGED = "tagged_db"
+METHOD_ARKHAM = "arkham"
 METHOD_CLASSIFIER = "classifier"
 METHOD_NONE = "none"
 
@@ -251,6 +252,35 @@ def attribute(chain: str, address_norm: str) -> AttributionResult:
                 f"Attributed from a curated tag ({best['source']}). "
                 "Tag applies to the cluster because clustering asserted shared ownership."
             ),
+        )
+
+    # Tier 1.5: Arkham, when a key is configured. It names an entity, which the
+    # behavioural tier below deliberately never does, so it ranks above it -
+    # and below curated tags, which are checked first. A hit is stored as a
+    # tag, so this call is made once per address, not once per analysis.
+    from app.services import external_intel
+
+    arkham = external_intel.arkham_lookup(chain, address_norm)
+    if arkham:
+        return AttributionResult(
+            method=METHOD_ARKHAM,
+            entity_name=arkham["entity_name"],
+            entity_type=arkham["entity_type"],
+            confidence=0.85,
+            source=external_intel.SOURCE_ARKHAM,
+            label=arkham.get("label"),
+            matched_address=address_norm,
+            cluster_size=1,
+            evidence=[
+                {
+                    "address": address_norm,
+                    "entity": arkham["entity_name"],
+                    "entity_type": arkham["entity_type"],
+                    "source": external_intel.SOURCE_ARKHAM,
+                    "arkham_type": arkham.get("arkham_type"),
+                }
+            ],
+            note="Attributed from Arkham Intelligence entity labels.",
         )
 
     features = behavioural_features(chain, address_norm)

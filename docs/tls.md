@@ -84,7 +84,7 @@ http port, and the tokens they are after travel in the clear.
 block in `infra/caddy/Caddyfile`:
 
 ```
-chaintrace.example.gov.in {
+cryptanet.example.gov.in {
     # No `tls internal` line - Caddy obtains and renews a public certificate
     # from Let's Encrypt automatically, provided port 80 and 443 reach it.
     ...

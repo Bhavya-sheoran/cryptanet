@@ -26,7 +26,7 @@ MIN_JWT_SECRET_BYTES = 32
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    app_name: str = "SIH26183 Fraud-Linked Exchange Identification"
+    app_name: str = "CRYPTANET - SIH26183 Fraud-Linked Exchange Identification"
     api_prefix: str = "/api/v1"
 
     # --- Datastores ---------------------------------------------------------
@@ -65,6 +65,17 @@ class Settings(BaseSettings):
     # BTC default; point this at a self-hosted Esplora to stop depending on
     # Blockstream's public instance.
     esplora_base_url: str = "https://blockstream.info/api"
+
+    # --- Third-party intelligence (both off without a key) -----------------
+    # Arkham: entity labels for wallets the curated tag database does not know.
+    arkham_api_key: str = ""
+    arkham_base_url: str = "https://api.arkm.com"
+    # Lookups per complaint intake, and how long intake may wait for them.
+    arkham_max_lookups: int = 8
+    arkham_time_budget_seconds: float = 5.0
+    # Chainabuse: scam reports filed against the suspect wallet.
+    chainabuse_api_key: str = ""
+    chainabuse_base_url: str = "https://api.chainabuse.com/v0"
 
     # --- Tracing ------------------------------------------------------------
     trace_max_depth: int = 8

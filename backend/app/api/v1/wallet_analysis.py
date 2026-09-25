@@ -22,8 +22,8 @@ from app.models import Case, CaseWallet, User, Wallet
 from app.schemas.analysis import WalletAnalysisResponse
 from app.services import alerts as alerts_svc
 from app.services import attribution as attribution_svc
+from app.services import external_intel, tracing
 from app.services import risk as risk_svc
-from app.services import tracing
 from app.services.chain_detect import detect
 
 router = APIRouter(tags=["analysis"])
@@ -199,6 +199,9 @@ def analyse_wallet(
         reported_in_cases=reported_in,
         reported_in_cases_total=reported_in_total,
         listing_limit=MAX_LISTED_CASES,
+        # Scam reports against the suspect wallet itself. Evidence for the case
+        # file, deliberately kept out of the exchange score above.
+        scam_reports=external_intel.chainabuse_reports(chain, info.address.strip()),
         # Derived from the edges this trace actually crossed, never from
         # DEMO_MODE. The setting says how the system is configured now; it says
         # nothing about where records already in the graph came from, and
