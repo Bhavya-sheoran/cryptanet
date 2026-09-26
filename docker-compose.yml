@@ -130,6 +130,14 @@ services:
       ETHERSCAN_API_KEY: ${ETHERSCAN_API_KEY:-}
       TRONGRID_API_KEY: ${TRONGRID_API_KEY:-}
       BLOCKCHAIR_API_KEY: ${BLOCKCHAIR_API_KEY:-}
+      # Third-party intelligence. Forwarded for the same reason as the keys
+      # above: the backend's WORKDIR is /app (= ./backend), so pydantic-settings
+      # reads backend/.env and never the root .env documented in .env.example.
+      # Without these two lines a key set in the root .env silently does nothing,
+      # and the feature reports "not configured" with no hint as to why.
+      ARKHAM_API_KEY: ${ARKHAM_API_KEY:-}
+      CHAINABUSE_API_KEY: ${CHAINABUSE_API_KEY:-}
+      CHAINABUSE_MONTHLY_BUDGET: ${CHAINABUSE_MONTHLY_BUDGET:-10}
       TRACE_MAX_DEPTH: ${TRACE_MAX_DEPTH:-8}
       TRACE_MAX_BREADTH: ${TRACE_MAX_BREADTH:-25}
       RISK_DECAY_HALF_LIFE_DAYS: ${RISK_DECAY_HALF_LIFE_DAYS:-90}

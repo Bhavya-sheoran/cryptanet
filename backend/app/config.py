@@ -76,6 +76,13 @@ class Settings(BaseSettings):
     # Chainabuse: scam reports filed against the suspect wallet.
     chainabuse_api_key: str = ""
     chainabuse_base_url: str = "https://api.chainabuse.com/v0"
+    # Chainabuse's standard key allows ten calls a MONTH, so this is a quota
+    # rather than a rate limit: an afternoon of testing can spend the lot, and
+    # nothing about the failure says why. The counter is enforced in
+    # services/external_intel.py and reported to the UI as `budget_exhausted`,
+    # which is deliberately distinct from "no reports found" - an unchecked
+    # wallet is not a clean wallet. Set 0 to disable the ceiling.
+    chainabuse_monthly_budget: int = 10
 
     # --- Tracing ------------------------------------------------------------
     trace_max_depth: int = 8

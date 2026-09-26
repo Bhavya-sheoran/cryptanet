@@ -321,6 +321,13 @@ class EtherscanConnector(BlockchainConnector):
         self._client.close()
 
 
+#: Stand-in identity for a TRC-20 transfer TronGrid describes without a token.
+#: Deliberately not a real contract address and deliberately not None: None
+#: would make Asset report the transfer as native TRX and price it as such.
+UNIDENTIFIED_TRC20_CONTRACT = "unidentified-trc20"
+UNIDENTIFIED_TRC20_SYMBOL = "Unidentified TRC-20"
+
+
 class TronGridConnector(BlockchainConnector):
     """TRON via TronGrid. Covers TRX and TRC-20 (USDT-TRC20 in particular)."""
 
@@ -362,14 +369,32 @@ class TronGridConnector(BlockchainConnector):
         out: list[ChainTransaction] = []
         for tx in payload.get("data", []):
             info = tx.get("token_info", {}) or {}
-            decimals = int(info.get("decimals", 6))
-            value = Decimal(str(tx.get("value", "0"))) / Decimal(10**decimals)
-            # `token_info.address` is the TRC-20 contract - the token's actual
-            # identity. Without it "USDT" is just a name anyone can claim.
+            contract = info.get("address")
+            if contract:
+                # `token_info.address` is the TRC-20 contract - the token's
+                # actual identity. Without it "USDT" is just a name anyone can
+                # claim.
+                decimals = int(info.get("decimals", 6))
+                symbol = info.get("symbol", "TRC20")
+                value = Decimal(str(tx.get("value", "0"))) / Decimal(10**decimals)
+            else:
+                # TronGrid returns "token_info": {} for a fraction of transfers
+                # (5 of 25 on one live account). Filling the gap with defaults
+                # is not harmless: contract=None is how Asset spells "native
+                # TRX", so the transfer would be priced at the TRX rate, and a
+                # guessed decimals rescales the amount by an arbitrary power of
+                # ten. Together those turned one real transfer into a 1.0e26
+                # rupee exposure. The movement itself is still evidence, so the
+                # edge is kept - as an asset that cannot be named, scaled or
+                # priced.
+                decimals = 0
+                symbol = UNIDENTIFIED_TRC20_SYMBOL
+                contract = UNIDENTIFIED_TRC20_CONTRACT
+                value = Decimal(str(tx.get("value", "0")))
             asset = Asset(
                 chain=self.chain,
-                symbol=info.get("symbol", "TRC20"),
-                contract=info.get("address"),
+                symbol=symbol,
+                contract=contract,
                 decimals=decimals,
             )
             out.append(

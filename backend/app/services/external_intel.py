@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 from concurrent.futures import ThreadPoolExecutor, wait
 from datetime import UTC, datetime
 
@@ -64,6 +65,26 @@ ARKHAM_TYPES = {
 #: grows.
 NEGATIVE_TTL_SECONDS = 7 * 86400
 CHAINABUSE_TTL_SECONDS = 6 * 3600
+
+#: A failed lookup is cached too, briefly. Without this a revoked key or an
+#: upstream outage turns every subsequent analysis into another failed call
+#: against the same monthly quota, which is the exact spam this guards against.
+CHAINABUSE_FAILURE_TTL_SECONDS = 900
+
+#: Redis key for the monthly call counter, suffixed with YYYY-MM.
+_CHAINABUSE_BUDGET_PREFIX = "sih183:intel:chainabuse:budget:"
+
+#: Chainabuse's quota is ten calls a MONTH, so throughput is irrelevant and
+#: restraint is everything. One call every two seconds, serialised, is far
+#: below anything they would object to and keeps the ordering predictable.
+_CHAINABUSE_RATE = 0.5
+
+#: Serialises every Chainabuse request in this process. Held across the HTTP
+#: call on purpose: it means concurrent analyses queue rather than fire
+#: together, and - because the cache is re-checked once the lock is taken -
+#: several requests for the same address collapse into a single call.
+_CHAINABUSE_LOCK = threading.Lock()
+_CHAINABUSE_PACER = None
 
 
 # ---------------------------------------------------------------------------
@@ -291,6 +312,53 @@ def summarise_chainabuse(payload, address: str) -> dict:
     }
 
 
+def _chainabuse_pacer():
+    """Lazily built, so importing this module costs no connector import."""
+    global _CHAINABUSE_PACER
+    if _CHAINABUSE_PACER is None:
+        from app.services.connectors.live import _Pacer
+
+        _CHAINABUSE_PACER = _Pacer(rate=_CHAINABUSE_RATE)
+    return _CHAINABUSE_PACER
+
+
+def _spend_monthly_budget() -> bool:
+    """Reserve one call against this month's quota. False when it is spent.
+
+    Counted in Redis rather than in memory so the figure survives a restart and
+    is shared across workers - an in-process counter would let a four-worker
+    deployment spend four times the quota without noticing.
+
+    A Redis outage allows the call through. The quota is a courtesy to the
+    provider, and the failure this exists to prevent is spending it *silently*,
+    not spending it during an outage.
+    """
+    budget = get_settings().chainabuse_monthly_budget
+    if budget <= 0:
+        return True
+
+    key = f"{_CHAINABUSE_BUDGET_PREFIX}{datetime.now(UTC):%Y-%m}"
+    try:
+        client = redis_client.get_client()
+        used = client.incr(key)
+        if used == 1:
+            # Comfortably past the end of any month, so the counter clears
+            # itself rather than needing a sweep.
+            client.expire(key, 35 * 86400)
+        if used > budget:
+            logger.warning(
+                "Chainabuse monthly budget spent (%d of %d); skipping lookup",
+                used - 1,
+                budget,
+            )
+            return False
+        logger.info("Chainabuse call %d of %d this month", used, budget)
+        return True
+    except Exception:  # noqa: BLE001 - a counter outage must not block an investigation
+        logger.debug("Chainabuse budget counter unavailable; allowing the call")
+        return True
+
+
 def chainabuse_reports(chain: str, address: str) -> dict:
     """Scam reports filed against `address` on Chainabuse.
 
@@ -306,20 +374,46 @@ def chainabuse_reports(chain: str, address: str) -> dict:
     if cached is not None:
         return cached
 
-    try:
-        resp = httpx.get(
-            f"{settings.chainabuse_base_url.rstrip('/')}/reports",
-            params={"address": address, "perPage": 50},
-            # Chainabuse: Basic auth, the API key as the username.
-            auth=(settings.chainabuse_api_key, settings.chainabuse_api_key),
-            headers={"Accept": "application/json"},
-            timeout=_TIMEOUT,
-        )
-        resp.raise_for_status()
-        summary = summarise_chainabuse(resp.json(), address)
-    except (httpx.HTTPError, ValueError) as exc:
-        logger.warning("Chainabuse lookup failed for %s: %s", address, exc)
-        return {"status": "unavailable", "source": "chainabuse"}
+    # One request at a time, for a quota measured in calls per month. The lock
+    # is held across the HTTP call deliberately - concurrent analyses queue
+    # instead of firing together, which is what keeps a burst of dashboard
+    # activity from spending the month in a few seconds.
+    with _CHAINABUSE_LOCK:
+        # Re-checked now that we hold the lock: while this request waited, the
+        # one ahead of it may have fetched exactly this address. Without this
+        # second look, N concurrent analyses of one wallet cost N calls.
+        cached = _cache_get(key)
+        if cached is not None:
+            return cached
 
-    _cache_put(key, summary, CHAINABUSE_TTL_SECONDS)
-    return summary
+        if not _spend_monthly_budget():
+            return {
+                "status": "budget_exhausted",
+                "source": "chainabuse",
+                "note": (
+                    "This month's Chainabuse call quota is spent, so this wallet "
+                    "was not checked. That is not the same as finding no reports."
+                ),
+            }
+
+        _chainabuse_pacer().wait()
+        try:
+            resp = httpx.get(
+                f"{settings.chainabuse_base_url.rstrip('/')}/reports",
+                params={"address": address, "perPage": 50},
+                # Chainabuse: Basic auth, the API key as BOTH username and
+                # password - their documented scheme, not a copy-paste slip.
+                auth=(settings.chainabuse_api_key, settings.chainabuse_api_key),
+                headers={"Accept": "application/json"},
+                timeout=_TIMEOUT,
+            )
+            resp.raise_for_status()
+            summary = summarise_chainabuse(resp.json(), address)
+        except (httpx.HTTPError, ValueError) as exc:
+            logger.warning("Chainabuse lookup failed for %s: %s", address, exc)
+            failure = {"status": "unavailable", "source": "chainabuse"}
+            _cache_put(key, failure, CHAINABUSE_FAILURE_TTL_SECONDS)
+            return failure
+
+        _cache_put(key, summary, CHAINABUSE_TTL_SECONDS)
+        return summary

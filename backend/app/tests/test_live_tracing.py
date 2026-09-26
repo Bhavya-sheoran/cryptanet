@@ -229,3 +229,72 @@ def test_time_budget_stops_the_trace_and_says_so(monkeypatch):
     assert result["budget_exhausted"] is True
     assert result["complete"] is False
     assert "ETH:t1" in {f"{t.chain}:{t.txid}" for t in result["transactions"]}
+
+
+# ---------------------------------------------------------------------------
+# TronGrid connector
+# ---------------------------------------------------------------------------
+def _trc20_row(value: str, token_info: dict | None) -> dict:
+    row = {
+        "transaction_id": "0xtrc20",
+        "block_timestamp": 1789024629000,
+        "from": "TUzaRA8m8rkwMN1vYRWdzASSosdixZKdRB",
+        "to": "T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb",
+        "type": "Transfer",
+        "value": value,
+    }
+    if token_info is not None:
+        row["token_info"] = token_info
+    return row
+
+
+def _tron_trc20(monkeypatch, rows: list[dict]):
+    """Serve one TRC-20 page; the native endpoint returns nothing."""
+    def fake_get_json(_client, url, params=None, source=None, **_kwargs):
+        if url.endswith("/trc20"):
+            return {"success": True, "data": rows}
+        return {"success": True, "data": []}
+
+    monkeypatch.setattr(live, "get_json", fake_get_json)
+    conn = live.TronGridConnector(api_key="test")
+    return conn.get_transactions("TUzaRA8m8rkwMN1vYRWdzASSosdixZKdRB")
+
+
+def test_trc20_transfer_uses_the_token_contract_and_its_decimals(monkeypatch):
+    txs = _tron_trc20(monkeypatch, [_trc20_row(
+        "3000000",
+        {"address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", "symbol": "USDT", "decimals": 6},
+    )])
+    assert len(txs) == 1
+    asset = txs[0].asset
+    assert asset.contract == "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
+    assert asset.is_native is False
+    assert txs[0].outputs[0].value == Decimal(3)
+
+
+def test_trc20_transfer_without_token_info_is_never_valued_as_trx(monkeypatch):
+    """TronGrid returns "token_info": {} for some real transfers.
+
+    Filling that gap with defaults made the transfer look like native TRX -
+    Asset spells "native" as contract=None - and rescaled it by a guessed six
+    decimals. A live account had five such rows, one of which came out as a
+    1.0e26 rupee exposure. The movement is still evidence, so the transfer is
+    kept; what must not survive is a name, a scale or a price for it.
+    """
+    from app.services.pricing import _coin_id
+
+    txs = _tron_trc20(monkeypatch, [_trc20_row("3000000000000000000000000000000", {})])
+    assert len(txs) == 1, "the transfer is evidence and must not be dropped"
+    asset = txs[0].asset
+    assert asset.is_native is False
+    assert asset.contract != "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"
+    assert asset.key != "TRON:native"
+    assert _coin_id(asset.key, "TRON") is None, "an unnamed token must not be priceable"
+    # No invented scale: the raw integer is carried through unchanged.
+    assert txs[0].outputs[0].value == Decimal("3000000000000000000000000000000")
+
+
+def test_trc20_transfer_with_a_missing_token_info_key_behaves_the_same(monkeypatch):
+    txs = _tron_trc20(monkeypatch, [_trc20_row("500", None)])
+    assert len(txs) == 1
+    assert txs[0].asset.key != "TRON:native"

@@ -22,6 +22,12 @@ def no_cache(monkeypatch):
     store = {}
     monkeypatch.setattr(external_intel, "_cache_get", lambda k: store.get(k))
     monkeypatch.setattr(external_intel, "_cache_put", lambda k, v, ttl: store.__setitem__(k, v))
+    # The Chainabuse monthly quota counts in Redis, which is shared with the
+    # running deployment. Left alone, a stack that has done real lookups this
+    # month makes every test here return `budget_exhausted` and fail for a
+    # reason that has nothing to do with what it is testing. The gate itself is
+    # covered by test_a_spent_monthly_budget_is_not_reported_as_no_reports.
+    monkeypatch.setattr(external_intel, "_spend_monthly_budget", lambda: True)
     return store
 
 
@@ -303,3 +309,25 @@ def test_por_list_becomes_binance_exchange_tags_on_traceable_chains_only():
     assert all(t["source"] == "binance_por" and t["confidence"] == 1.0 for t in tags)
     assert by_chain["ETH"]["address_norm"] == "0xabcdef"
     assert "custodian Ceffu" in by_chain["ETH"]["label"]
+
+
+def test_a_spent_monthly_budget_is_not_reported_as_no_reports(monkeypatch):
+    """A quota that ran out must read as "not checked", never as "clean".
+
+    Chainabuse's free tier is metered per month, so this path is reached in
+    normal operation rather than only under failure. Reporting it as zero
+    reports would tell an officer the wallet has no complaints against it on the
+    strength of a lookup that never happened.
+    """
+    settings_with(monkeypatch, chainabuse_api_key="k")
+    monkeypatch.setattr(external_intel, "_spend_monthly_budget", lambda: False)
+
+    def must_not_be_called(*_a, **_k):  # pragma: no cover - the assert is the point
+        raise AssertionError("no HTTP call may be made once the quota is spent")
+
+    monkeypatch.setattr(external_intel.httpx, "get", must_not_be_called)
+
+    result = external_intel.chainabuse_reports("TRON", "Tabc")
+    assert result["status"] == "budget_exhausted"
+    assert result.get("report_count") is None
+    assert "not checked" in result["note"]

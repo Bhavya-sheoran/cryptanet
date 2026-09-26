@@ -28,8 +28,11 @@ Everything it operates on is one of:
 - **Public datasets** — the Elliptic Bitcoin Dataset (classifier training and
   validation), Etherscan Label Cloud, GraphSense TagPacks, and the OFAC SDN
   crypto address list (VASP tagging seed data).
-- **Public blockchain indexer APIs** — Etherscan, TronGrid, Blockchair — when
-  API keys are supplied and `DEMO_MODE=false`.
+- **Public blockchain indexer APIs** — Blockstream Esplora, Etherscan, TronGrid
+  — when `DEMO_MODE=false`. Bitcoin needs no key at all.
+- **Public third-party intelligence** — Binance Proof of Reserves and WazirX
+  (keyless), Arkham and Chainabuse (each only with a key). A source that was not
+  consulted is reported as *not checked*, never as a clean result.
 
 The backend reports its own provenance at `/api/v1/health/ready`, and the UI
 banner is rendered from that field rather than from hardcoded copy, so the claim
@@ -50,9 +53,16 @@ database `CHECK` constraint, a service-layer role check, and a test.
 | **0** | Repo scaffold, docker-compose, Postgres + Neo4j schema | **complete** |
 | **1** | Wallet intake, chain detection, connectors, graph writer, clustering | **complete** |
 | **2** | VASP attribution, fraud-risk scoring, `/api/wallet` | **complete** |
-| 3 | React (JSX) investigator dashboard, Sankey trace view | not started |
-| 4 | Case management, hashed PDF export, mock NCRP, STR drafts, freeze workflow, alerts | not started |
-| 5 | End-to-end integration test, RBAC/security pass | not started |
+| **3** | React (JSX) investigator dashboard, Sankey trace view | **complete** |
+| **4** | Case management, hashed PDF export, mock NCRP, STR drafts, freeze workflow, alerts | **complete** |
+| **5** | End-to-end integration test, RBAC/security pass | **complete** |
+| **6** | Live-chain operation, trace budgets, external intelligence, LAN deployment | **complete** |
+
+Phase 6 is the one that is not in the original plan. It exists because
+everything above it was built and tested against the synthetic fraud ring, and
+pointing the same code at real chains surfaced a different class of problem —
+rate limits reported as success, traces that ran for six minutes, a query that
+took 101 seconds. See *[Running on live chain data](#running-on-live-chain-data)*.
 
 ---
 
@@ -60,7 +70,7 @@ database `CHECK` constraint, a service-layer role check, and a test.
 
 ```
 victim report ──▶ FastAPI intake ──▶ chain detect ──▶ blockchain connectors
-                       │                                (Etherscan/TronGrid/Blockchair
+                       │                                (Esplora/Etherscan/TronGrid
                        │                                 or synthetic in DEMO_MODE)
                        ▼
                  Neo4j graph writer ──▶ clustering (common-input-ownership,
@@ -70,6 +80,7 @@ victim report ──▶ FastAPI intake ──▶ chain detect ──▶ blockcha
                        │
                        ▼
                  VASP attribution ──▶ tagged-address DB (public sources)
+                       │              ├─ then: Arkham entity labels (if keyed)
                        │              └─ fallback: behavioural classifier
                        ▼
                  fraud-linkage score (time-decayed, per contributing case)
@@ -85,13 +96,16 @@ victim report ──▶ FastAPI intake ──▶ chain detect ──▶ blockcha
 | Layer | Choice |
 |---|---|
 | Backend | Python 3.11 · FastAPI |
+| Chain data | Blockstream Esplora (BTC, keyless) · Etherscan v2 (ETH) · TronGrid (TRON) |
+| Valuation | WazirX (INR-direct) → CoinGecko fallback |
+| External intel | Arkham · Chainabuse · Binance Proof of Reserves (all optional, key-gated) |
 | Graph | Neo4j 5.26 Community + Graph Data Science |
 | Relational | PostgreSQL 16 |
 | Events | Redis Streams → WebSocket |
 | ML | scikit-learn / XGBoost, trained on the public Elliptic dataset (a PyTorch Geometric GNN remains a stretch goal only) |
-| Frontend | React 18 · **plain JavaScript + JSX only** · Vite 6 · D3 / d3-sankey |
+| Frontend | React 18 · **plain JavaScript + JSX only** · Vite 6 · D3 / d3-sankey · Vitest |
 | Auth | Simplified JWT with role claims |
-| Infra | Docker Compose |
+| Infra | Docker Compose · Caddy (TLS, LAN access) |
 
 Architecture and design rationale: **[docs/architecture.md](docs/architecture.md)**.
 Live demo click-path: **[docs/demo-script.md](docs/demo-script.md)**.
@@ -108,9 +122,13 @@ API contracts: **[docs/api.md](docs/api.md)**.
    named by several victims yields several cases — that fan-out *is* the
    fraud-ring signal, surfaced at `/api/v1/wallets/multi-reported`.
 3. **Connectors** fetch transactions. `DEMO_MODE=true` serves the synthetic
-   fraud ring; otherwise Etherscan / TronGrid / Blockchair. If a live connector
-   is requested but unconfigured it falls back to synthetic **and reports
-   `synthetic` as the source** rather than misrepresenting provenance.
+   fraud ring; otherwise **Blockstream Esplora** (BTC — keyless, which is why it
+   is the default rather than Blockchair), **Etherscan v2** (ETH — native,
+   ERC-20 and internal transfers merged, because a trail that moves through a
+   contract disappears from `txlist` alone) and **TronGrid** (TRON — TRC-20 and
+   native TRX merged). If a live connector is requested but unconfigured it
+   falls back to synthetic **and reports `synthetic` as the source** rather than
+   misrepresenting provenance.
 4. **Tracing** walks breadth-first in the direction the money moved, to a
    configurable depth (default 6).
 5. **Graph writer** MERGEs both the full UTXO shape
@@ -122,12 +140,15 @@ API contracts: **[docs/api.md](docs/api.md)**.
 
 ### What Phase 2 actually does
 
-7. **VASP attribution**, two tiers, and the tier used is always reported:
-   `tagged_db` (a curated tag from a public source, citing that source) or
-   `classifier` (no tag matched; a category predicted from behaviour). The
-   behavioural tier **never invents a company name** - it returns a category and
-   a confidence, because behaviour alone cannot identify a company. `none` is a
-   legitimate result; a fabricated attribution is not.
+7. **VASP attribution**, three tiers, and the tier used is always reported:
+   `tagged_db` (a curated tag from a public source, citing that source),
+   `arkham` (Arkham Intelligence's entity label, only when a key is configured)
+   or `classifier` (nothing matched; a category predicted from behaviour). The
+   order is deliberate — a published, citable tag outranks a commercial label,
+   which outranks a model's guess. The behavioural tier **never invents a
+   company name**: it returns a category and a confidence, because behaviour
+   alone cannot identify a company. `none` is a legitimate result; a fabricated
+   attribution is not.
 8. **Fraud-linkage scoring** aggregates how often victim-reported wallets
    terminate at an exchange, time-decayed with a configurable half-life
    (default 90 days) and squashed onto 0-100 so one prolific reporter cannot
@@ -312,7 +333,7 @@ dispatched            5              5
 
 ### The tagged-address database
 
-Seeded from the public sources named in the brief, **3,221 tags / 1,472
+Seeded from the public sources named in the brief, **3,344 tags / 1,472
 entities**, every one recording where it came from:
 
 | Source | Tags | What it is |
@@ -322,9 +343,11 @@ entities**, every one recording where it came from:
 | GraphSense OFAC pack | 544 | community-curated sanctions tags |
 | WalletExplorer | 386 | BTC service-wallet attributions |
 | GraphSense TagPacks | 272 | exchange + mixer packs |
+| Binance Proof of Reserves | 123 | published by the exchange itself — the only self-attested source here |
 | Synthetic (demo ring) | 5 | fictional, marked `source: synthetic` |
 
-By type: 949 exchange, 948 sanctioned, 240 darknet, 201 gambling, 184 mixer.
+By type: 1,072 exchange, 948 sanctioned, 697 unknown, 240 darknet, 201 gambling,
+184 mixer, 2 payment processor.
 
 Refresh with:
 ```bash
@@ -422,11 +445,118 @@ knows.
 
 ---
 
+## Running on live chain data
+
+`DEMO_MODE=false` points the same code at real chains. Everything below exists
+because that switch broke things the synthetic dataset could never have exposed.
+
+### Rate limits that arrive disguised as success
+
+Etherscan's free tier refuses an over-rate request with **HTTP 200** and a body
+saying `NOTOK`. The HTTP helper was caching that refusal for five minutes, so
+one burst of concurrency poisoned every subsequent lookup of those addresses
+and the trace came back **quietly incomplete** — the worst possible failure for
+evidence. Three things now prevent it:
+
+- a **pacer** holding Etherscan to 2.8 calls/second, below the documented 3;
+- `cache_if` on the HTTP helper, so a response is only cached when it is an
+  actual answer (`get_json(..., cache_if=_etherscan_answered)`);
+- a trace with any failed lookup **cannot report itself complete**. The panel
+  says which addresses were not read.
+
+### Budgets, because chain fan-out is not ours to control
+
+Each expanded address costs an indexer call, and how far a wallet fans out is a
+property of the chain, not of anything this system decides. Without ceilings a
+single complaint could spend a daily quota or leave an officer watching a
+spinner for six minutes. Every one of these is a setting:
+
+| Setting | Default | What it bounds |
+|---|---:|---|
+| `TRACE_TIME_BUDGET_SECONDS` | 18 | wall-clock for the upstream walk |
+| `CONNECTOR_CALL_BUDGET` | 200 | indexer calls for one traced address |
+| `TRACE_CONCURRENCY` | 6 | parallel lookups per depth level |
+| `GRAPH_MAX_NODES` | 200 | nodes in the *picture* — findings use separate, selective queries |
+| `TRACE_STOP_AT_SERVICES` | true | stop at exchanges/processors/gambling |
+| `TRACE_MAX_DEPTH` | 8 | hops |
+
+`TRACE_STOP_AT_SERVICES` is the one that matters most. Following money *into* an
+exchange's hot wallet walks other customers' funds — it consumed most of the
+call budget and told an investigator nothing, because the answer at that point
+is already "it reached this exchange; serve them a legal request".
+
+Measured on live BTC/ETH/TRON wallets: **1–25 seconds** end to end, against
+roughly six minutes before this work.
+
+### Correctness bugs that only live data could surface
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `/wallet` 500s on some live wallets | Neo4j refuses `shortestPath` when start == end | bind `dest` before the path search |
+| Risk scoring took 101 s | path enumeration over a real subgraph | bound-endpoint `shortestPath`, capped target set — now ~1 s |
+| `MemoryPoolOutOfMemoryError` | one enormous delete transaction | batched via `apoc.periodic.iterate` |
+| A TRC-20 transfer valued at ₹1.0 × 10²⁶ | TronGrid returns `"token_info": {}` for some real transfers; `contract=None` is how `Asset` spells *native TRX*, so a token was priced at the TRX rate with a guessed decimal scale | the transfer is kept (the movement is evidence) as an asset that cannot be named, scaled or priced |
+
+The clustering heuristic also changed shape: common-input-ownership now emits a
+**star** (n−1 edges) rather than a clique (n(n−1)/2). The connected components
+are identical; the write cost is not.
+
+### Reaching it from another device
+
+`https://<LAN_IP>:8443` serves the dashboard to anything on the same Wi-Fi.
+Browsers send **no SNI for a bare IP address**, so Caddy needs an explicit
+`default_sni` — without it the handshake fails before any HTTP is spoken.
+
+Closing that door opened another, which is now also closed: Postgres, Neo4j and
+Redis were published on all interfaces, Redis without a password. They are bound
+to `127.0.0.1` in `docker-compose.yml`. Only Caddy listens on the LAN.
+
+```bash
+LAN_IP=192.168.1.42 docker compose up -d      # your machine's address on the Wi-Fi
+```
+
+---
+
+## External intelligence sources
+
+Four public services, each doing the one job it is actually good at. **Every one
+of them is optional**, and a source that was not consulted is reported as *not
+checked* — never as a clean result. Saying "0 scam reports" about a lookup that
+never ran is how a system launders its own gaps into evidence.
+
+| Source | Used for | Needs a key | Trust weight |
+|---|---|---|---:|
+| **Binance Proof of Reserves** | authoritative Binance wallet addresses, straight from the exchange | no | 1.00 |
+| **WazirX** | INR valuation without a USD cross-rate — it quotes INR directly | no | — |
+| **Arkham Intelligence** | entity labels for wallets the curated tag DB does not know | yes | 0.85 |
+| **Chainabuse** | scam reports already filed against the suspect wallet | yes | — |
+
+```bash
+docker compose exec backend python scripts/sync_binance_por.py   # refresh PoR addresses
+```
+
+Binance PoR currently contributes **123 tags**. Arkham sits between the curated
+tag database and the behavioural classifier (`METHOD_ARKHAM`): a commercial
+label is better than a guess and weaker than a published, citable tag.
+
+Chainabuse's free tier is metered per month, so `CHAINABUSE_MONTHLY_BUDGET`
+(default 10) reserves each call in Redis — shared across workers, since an
+in-process counter would let a four-worker deployment spend four times the
+quota. A spent quota reports `budget_exhausted`, which the UI renders as *not
+checked*.
+
+**Coupcoin is not integrated.** No public explorer, API or source code for it
+could be found, and tracing a chain requires one of those or a node to query. It
+is left out rather than stubbed.
+
+---
+
 ## Frontend rule: JSX only
 
 No TypeScript anywhere in this repo — no `.ts`, no `.tsx`, no `tsconfig.json`,
 no `@types/*`. Runtime type-checking is done with **PropTypes**, and **ESLint is
 the static gate** in place of `tsc` (`react/prop-types` is set to `error`).
+Currently **25 `.jsx` + 10 `.js`**, zero TypeScript.
 
 Enforced by `scripts/check_no_typescript.sh`, which fails on any TypeScript
 source, tsconfig, or TS tooling dependency:
@@ -466,11 +596,17 @@ Windows setup — the raw equivalents are:
 | Service | URL |
 |---|---|
 | Dashboard (TLS) | https://localhost:8443 |
+| Dashboard from another device on the Wi-Fi | `https://<LAN_IP>:8443` (start with `LAN_IP=<your ip>`) |
 | Dashboard (plain HTTP) | http://localhost:5174 |
 | Backend API docs | http://localhost:8001/docs |
 | Readiness probe | http://localhost:8001/api/v1/health/ready |
 | Neo4j Browser | http://localhost:7475 (`neo4j` / `sihdevpass`) |
 | PostgreSQL | `localhost:5434` (`sih` / `sihdev` / db `sih183`) |
+
+> **The datastores listen on `127.0.0.1` only.** Postgres, Neo4j and Redis were
+> published on all interfaces — Redis with no password — which made them
+> reachable by anything on the same Wi-Fi the moment LAN access was added. Only
+> Caddy is exposed to the network.
 
 > **Host ports are deliberately non-default** (5434 / 7475 / 7688 / 6380 / 8001 /
 > 5174) so this stack can run side by side with another local project holding the
@@ -481,12 +617,24 @@ The Postgres schema in `infra/postgres/init.sql` is applied automatically on
 first start. Neo4j constraints from `infra/neo4j/init.cypher` are applied by the
 backend at startup, idempotently.
 
-### Blockchain API keys — optional
+### API keys — all optional
 
 The stack runs fully without any key: `DEMO_MODE=true` serves the synthetic
-fraud-ring dataset. To trace live chain data, put keys in `.env` and set
-`DEMO_MODE=false`. Blockchair works keyless at low rates; Etherscan and TronGrid
-need a free key each.
+fraud-ring dataset. To trace live chain data, set `DEMO_MODE=false`.
+
+| Key | For | Without it |
+|---|---|---|
+| — | **Bitcoin** via Blockstream Esplora | works keyless |
+| `ETHERSCAN_API_KEY` | Ethereum | free tier, 3 calls/s |
+| `TRONGRID_API_KEY` | TRON | works keyless at a lower rate |
+| `ARKHAM_API_KEY` | entity labels | tier skipped; attribution falls through to the classifier |
+| `CHAINABUSE_API_KEY` | scam reports | reported as *not checked*, never as *no reports* |
+| — | **WazirX / Binance PoR** | keyless |
+
+Turning off `DEMO_MODE` is the act of claiming real provenance, so it also
+**force-disables the published demo accounts** (`demo_auth_enabled` is the AND
+of two switches) and makes `check_secrets()` refuse to start on a placeholder
+signing key rather than merely warn.
 
 ### Troubleshooting
 
@@ -507,7 +655,7 @@ container, which applies the constraints itself at startup.
 
 ## Running the demo
 
-The full end-to-end demo script is a Phase 5 deliverable. What works today:
+Two paths: the deterministic synthetic ring, and live chain data.
 
 ```bash
 # 1. (Re)generate the synthetic fraud ring - deterministic, seed 26183
@@ -578,6 +726,29 @@ BTC/ETH/TRON, 13 complaints, 4 entities (3 fictional exchanges + 1 mixer). Every
 generated address is genuinely checksum-valid, so the demo data passes the same
 validator real input does.
 
+### Demonstrating on live chain data
+
+With `DEMO_MODE=false`, file any real address. Finding good demonstration
+wallets is itself a task, because a wallet that was quiet last week may be busy
+today — one address used here went from 9 nodes in 7 seconds to 130 nodes in 62
+seconds over three days.
+
+What makes a wallet worth demonstrating is that it **reaches a tagged exchange
+within a few hops while staying small enough to read**. Both halves can be
+checked without filing anything: walk the chain with the live connector and test
+each hop against the tag database. That keeps the case genuinely new when the
+officer files it, at the cost of not knowing the risk score in advance — the
+score does not exist until a case does.
+
+Two properties of the scoring are worth knowing before a demonstration:
+
+- **Filing the same address twice raises its score.** The score counts linked
+  complaints with age decay, so a stack that has been demonstrated a few times
+  shows High where a clean one shows Medium.
+- **The filed amount does not affect the score.** It is carried into the case
+  record and the PDF, but the score is driven by complaint count and age alone.
+
+
 > On Git Bash for Windows, prefix `docker compose exec` with `MSYS_NO_PATHCONV=1`
 > when an argument is an absolute container path, or Git Bash rewrites `/app/...`
 > into a Windows path.
@@ -587,35 +758,57 @@ validator real input does.
 ## Tests
 
 ```bash
-docker compose exec backend pytest -q     # backend tests
+docker compose exec backend pytest -q      # backend tests
 docker compose exec backend ruff check app/
-docker compose exec frontend npm run lint # ESLint - the static gate in place of tsc
+docker compose exec frontend npx vitest run # frontend tests
+docker compose exec frontend npm run lint  # ESLint - the static gate in place of tsc
 docker compose exec frontend npm run build # production build must succeed
-bash scripts/check_no_typescript.sh       # hard JSX-only gate
+bash scripts/check_no_typescript.sh        # hard JSX-only gate
 ```
 
-Latest result (end of Phase 5): **158 passed** (pytest), **ruff clean**,
-**ESLint 0 errors**, **production build OK**, **PASS** (JSX-only gate — 11
-`.jsx` + 1 `.js`, zero TypeScript).
+Latest result: **391 passed** (pytest), **63 passed / 7 files** (Vitest),
+**ruff clean**, **ESLint 0 errors**, **production build OK**, **PASS**
+(JSX-only gate — 25 `.jsx` + 10 `.js`, zero TypeScript).
 
-The frontend has no unit-test runner. Its gates are ESLint (which carries the
-weight `tsc` would in a TypeScript project, with `prop-types` validation on), a
-clean production build, and a **real headless-browser render** — the dashboard
-was loaded in Edge and screenshotted to confirm it actually draws, rather than
-merely compiling. Adding Vitest is a reasonable follow-up.
+> The backend suite refuses to run against a deployment with `DEMO_MODE=false`,
+> because its fixtures delete graph data. Override deliberately with
+> `ALLOW_TESTS_ON_LIVE_DEPLOYMENT=1` when the live stack is the only one you have.
+
+The frontend now has **Vitest + Testing Library** alongside ESLint (which carries
+the weight `tsc` would in a TypeScript project, with `prop-types` validation on)
+and a clean production build. The tests cover the things a lint pass cannot see:
+that money is formatted in rupees an officer recognises, that a wallet
+identification names its source, that the sidebar width clamps and survives a
+corrupt stored value, and — most importantly — that a check which did not run is
+rendered as *not checked* rather than as a clean result.
+
+**Backend — 391 tests across 26 files.** The largest:
 
 | Suite | Tests | Covers |
-|---|---|---|
+|---|---:|---|
 | `test_chain_detect.py` | 33 | BIP-173/BIP-350/EIP-55 reference vectors, checksum rejection, normalisation |
-| `test_connectors.py` | 19 | Factory + provenance fallback, synthetic dataset integrity, ETH normalisation regression |
-| `test_analysis.py` | 14 | `/api/wallet` contract, Sankey shape, explainability, ranking |
-| `test_clustering.py` | 13 | Both UTXO heuristics against a real Neo4j + GDS |
-| `test_risk.py` | 14 | Time decay, saturation, thresholds, aggravating factors |
-| `test_attribution.py` | 10 | Tag lookup, cluster propagation, "never name a guess" |
-| `test_intake.py` | 11 | Intake API, dedupe, cross-case view |
 | `test_phase4.py` | 33 | Auth, notes, evidence + report hashing, NCRP mock, STR, **freeze approval gate**, alerts, WebSocket |
-| `test_model_artifact.py` | 6 | Trained model loads + infers in the shipped runtime |
-| `test_smoke.py` | 4 | App boots, liveness contract |
+| `test_exposure.py` | 30 | Which service the money reached, ranking, and the plain-language answer |
+| `test_connectors.py` | 23 | Factory + provenance fallback, synthetic dataset integrity, ETH normalisation |
+| `test_external_intel.py` | 22 | Arkham, Chainabuse, WazirX, Binance PoR — parsing, ordering, and "not checked ≠ clean" |
+| `test_observability.py` | 21 | Structured logging, request ids, metrics |
+| `test_connector_http.py` | 17 | Retry, backoff, and the rule that a rate-limit refusal is never cached |
+| `test_analysis.py` | 17 | `/api/wallet` contract, Sankey shape, explainability, ranking |
+| `test_clustering.py` | 16 | Both UTXO heuristics against a real Neo4j + GDS |
+| `test_risk.py` | 15 | Time decay, saturation, thresholds, aggravating factors |
+| `test_provenance.py` | 15 | Synthetic data can never be reported as live-chain data |
+| `test_live_tracing.py` | 14 | Live connector behaviour under rate limits, budgets and malformed upstream payloads |
+| `test_illicit_model.py` | 14 | Classifier inference contract |
+| `test_report_sections.py` | 13 | Every section of the forensic PDF, including the "not checked" states |
+| `test_sessions.py` | 11 | Token revocation, role re-read, cutoffs |
+| `test_intake.py` | 11 | Intake API, dedupe, cross-case view |
+| `test_audit_chain.py` | 10 | Tamper-evident audit log |
+| `test_attribution.py` | 10 | Tag lookup, cluster propagation, "never name a guess" |
+
+**Frontend — 63 tests across 7 files** (`npx vitest run`): number and currency
+formatting, the exposure panel's empty and populated states, the identification
+card's source naming and *not checked* handling, sign-in, and the sidebar
+resizer's clamping and storage recovery.
 
 Graph-backed tests run against the live compose stack and skip cleanly when it
 is down.
@@ -661,6 +854,20 @@ Recorded here rather than blocking on questions, per the working agreement.
    of it that actually reaches the destination.
 7. **Mixers are flagged, not unwound.** Interaction with a known mixer is
    recorded as a risk signal; this system does not attempt to defeat mixing.
+8. **Tracing stops at custodial services** (`TRACE_STOP_AT_SERVICES`, default
+   on). Past an exchange's hot wallet the trail runs through other customers'
+   money, and the investigative answer is already known: serve that exchange a
+   legal request. Turning it off is supported and slow.
+9. **An unvalued asset is left unvalued.** Where no INR price exists for a token,
+   the amount is shown in the token and excluded from valuation. It is never
+   coerced to zero, which would silently rank a real exposure as worthless, and
+   never guessed.
+10. **Every external source is optional, and absence is stated.** A source that
+    was not consulted — no key, spent quota, failed call — reports *not checked*.
+    A finding of "none" is only ever printed when a lookup actually returned
+    none.
+11. **Coupcoin is not supported.** Integrating a chain needs a public explorer,
+    an API, or a node to query; none is publicly available for Coupcoin.
 
 ---
 
@@ -668,9 +875,9 @@ Recorded here rather than blocking on questions, per the working agreement.
 
 ```
 backend/    FastAPI service - API, services, connectors, graph/DB access, tests
-frontend/   Vite + React (JSX only) investigator dashboard
+frontend/   Vite + React (JSX only) investigator dashboard, Vitest suite
 ml/         Dataset fetch, feature engineering, model training, tag seed data
-infra/      Postgres DDL, Neo4j constraints, helper scripts
-docs/       Architecture, schema, API contracts, demo script
-scripts/    Synthetic complaint generator, e2e demo, JSX-only guard
+infra/      Postgres DDL, Neo4j constraints, Caddy TLS/LAN config
+docs/       Architecture, schema, API contracts, demo script, TLS notes
+scripts/    Synthetic generator, e2e demo, security probes, Binance PoR sync, JSX-only guard
 ```

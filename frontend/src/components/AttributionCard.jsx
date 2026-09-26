@@ -47,6 +47,10 @@ const SOURCE_NAMES = {
 function scamReportText(summary) {
   if (!summary || summary.status === 'not_configured') return 'Not checked (Chainabuse key not set)';
   if (summary.status === 'unavailable') return 'Not checked (Chainabuse did not respond)';
+  // Distinct from 'No reports filed' on purpose. The quota being spent means
+  // the wallet was never screened, and showing that as a clean result would
+  // invent a negative finding the system never established.
+  if (summary.status === 'budget_exhausted') return 'Not checked (Chainabuse quota spent this month)';
   const n = summary.report_count || 0;
   if (n === 0) return 'No reports filed';
   const cats = Object.keys(summary.categories || {}).slice(0, 3).join(', ');
