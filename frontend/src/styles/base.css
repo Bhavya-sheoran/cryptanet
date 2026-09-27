@@ -63,38 +63,24 @@ code, pre, .mono { font-family: var(--font-mono); font-size: 0.94em; font-varian
 }
 
 /* ==========================================================================
-   App shell: fixed top bar + left rail + scrolling content
-   A rail rather than one long page: an investigator moves between a live
-   trace, the case list and the alert queue, and those are places, not
-   sections of a document.
+   App shell: one top bar, then scrolling content
+   The sections are places an investigator moves between - a live trace, the
+   case list, the alert queue - so they stay visible as a single row of
+   destinations rather than being folded into a menu.
    ========================================================================== */
-/* Two areas, not three: the provenance banner that used to sit above both was
-   removed, and its grid row went with it so it leaves no gap behind. */
-.app {
-  display: grid;
-  grid-template-columns: var(--rail-w) 1fr;
-  grid-template-rows: 1fr;
-  grid-template-areas: "rail main";
-  min-height: 100vh;
+.app { display: flex; flex-direction: column; min-height: 100vh; }
+
+/* --- top bar -------------------------------------------------------------- */
+.navbar {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; gap: var(--sp-4);
+  min-height: var(--nav-h);
+  padding: 0 var(--sp-5);
+  background: var(--surface-nav);
+  border-bottom: 1px solid var(--border);
 }
 
-/* --- left rail ------------------------------------------------------------ */
-.rail {
-  grid-area: rail;
-  position: relative;   /* anchors the drag handle on its edge */
-  background: var(--surface-rail);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  padding: var(--sp-4) var(--sp-3);
-  gap: var(--sp-5);
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  overflow-y: auto;
-}
-
-.brand { display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-2); }
+.brand { display: flex; align-items: center; gap: var(--sp-3); flex: none; }
 .brand-mark {
   width: 32px; height: 32px; flex: none;
   border-radius: var(--r-md);
@@ -118,55 +104,59 @@ code, pre, .mono { font-family: var(--font-mono); font-size: 0.94em; font-varian
   font-weight: var(--fw-bold);
   letter-spacing: 0.04em;
   line-height: 1.2;
+  white-space: nowrap;
 }
 
-.rail-nav { display: flex; flex-direction: column; gap: 2px; }
-.rail-item {
-  display: flex; align-items: center; gap: var(--sp-3);
-  padding: var(--sp-2) var(--sp-2);
+.navbar-nav { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.nav-item {
+  display: flex; align-items: center; gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
   border-radius: var(--r-md);
-  background: none; border: 0; width: 100%;
+  background: none; border: 0;
   color: var(--text-muted);
-  font: inherit; font-size: var(--fs-md); font-weight: var(--fw-bold); text-align: left;
+  font: inherit; font-size: var(--fs-md); font-weight: var(--fw-bold);
+  white-space: nowrap;
   cursor: pointer;
   transition: background var(--transition), color var(--transition);
 }
 /* Hover and selection previously used a grey and a pale blue that both sat on
-   a white rail. On a blue rail the grey reads as dirt and the pale blue
+   a white surface. On the blue bar the grey reads as dirt and the pale blue
    vanishes, so hover deepens the blue and the selected item is lifted out of
    it in white. */
-.rail-item:hover { background: color-mix(in srgb, var(--brand-500) 16%, transparent); color: var(--text); }
-.rail-item[aria-current="page"] {
+.nav-item:hover { background: color-mix(in srgb, var(--brand-500) 16%, transparent); color: var(--text); }
+.nav-item[aria-current="page"] {
   background: var(--bg-elevated);
   color: var(--accent);
   box-shadow: var(--shadow-sm);
 }
-.rail-item .glyph { width: 18px; text-align: center; flex: none; font-size: 16px; }
-.rail-item .count {
-  margin-left: auto;
+.nav-item .glyph { flex: none; font-size: 16px; }
+.nav-item .count {
   font-size: var(--fs-xs);
-  /* Grey on the blue rail reads as disabled; white keeps the count legible. */
+  /* Grey on the blue bar reads as disabled; white keeps the count legible. */
   background: var(--bg-elevated);
   color: var(--text-muted);
   padding: 1px 7px;
   border-radius: var(--r-sm);
 }
-.rail-foot { margin-top: auto; display: flex; flex-direction: column; gap: var(--sp-3); }
+
+/* Everything from the search box rightwards is pushed to the end of the bar. */
+.navbar > .search { margin-left: auto; }
+
+.navbar-tools { display: flex; align-items: center; gap: 2px; flex: none; }
+.icon-btn {
+  display: grid; place-items: center;
+  width: 32px; height: 32px;
+  border-radius: var(--r-md);
+  background: none; border: 0;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+.icon-btn:hover { background: color-mix(in srgb, var(--brand-500) 16%, transparent); color: var(--text); }
+.icon-btn .glyph { font-size: 16px; }
 
 /* --- main column ---------------------------------------------------------- */
-.main { grid-area: main; min-width: 0; display: flex; flex-direction: column; }
-
-.topbar {
-  position: sticky; top: 0; z-index: 20;
-  display: flex; align-items: center; gap: var(--sp-4);
-  height: var(--nav-h);
-  padding: 0 var(--sp-6);
-  background: var(--surface-nav);
-  border-bottom: 1px solid var(--border);
-}
-/* The search box is width-capped, so without this the officer identity sits
-   mid-bar against the search field instead of at the end of the bar. */
-.topbar-user { margin-left: auto; }
+.main { min-width: 0; display: flex; flex-direction: column; flex: 1 1 auto; }
 
 .content {
   padding: var(--sp-6);
@@ -193,36 +183,15 @@ code, pre, .mono { font-family: var(--font-mono); font-size: 0.94em; font-varian
   margin: auto auto 0;
 }
 
-/* --- resizable navigation panel ------------------------------------------- */
-/* Sits over the rail's right border, wider than it looks so it is easy to
-   grab, and invisible until pointed at or focused. */
-.rail-resizer {
-  position: absolute; top: 0; right: -3px; bottom: 0;
-  width: 7px; z-index: 5;
-  cursor: col-resize;
-  background: none; border: 0; padding: 0;
-}
-.rail-resizer:hover,
-.rail-resizer:focus-visible {
-  background: var(--accent);
-  outline: none;
-}
-/* While dragging, the cursor stays a resize arrow wherever the pointer goes
-   and text stops selecting under it. */
-body.is-resizing-rail { cursor: col-resize; user-select: none; }
-
 /* --- responsive ----------------------------------------------------------- */
-@media (max-width: 1000px) {
-  .app { grid-template-columns: 1fr; grid-template-areas: "banner" "rail" "main"; }
-  /* The panel sits across the top at this width, so there is no edge to drag. */
-  .rail-resizer { display: none; }
-  .rail {
-    position: static; height: auto; flex-direction: row; align-items: center;
-    overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--border);
-    padding: var(--sp-2) var(--sp-3);
-  }
-  .rail-nav { flex-direction: row; }
-  .rail-foot { display: none; }
+/* The bar wraps onto a second line rather than scrolling sideways: a hidden
+   destination is worse than a taller bar. */
+@media (max-width: 1100px) {
+  .navbar { flex-wrap: wrap; padding: var(--sp-2) var(--sp-4); row-gap: var(--sp-2); }
+  .navbar > .search { max-width: 220px; }
+}
+@media (max-width: 760px) {
+  .navbar > .search { margin-left: 0; max-width: none; flex: 1 1 100%; order: 3; }
+  .navbar-tools, .navbar > .signed-in-as, .navbar > .badge { margin-left: auto; }
   .content { padding: var(--sp-4); }
-  .topbar { padding: 0 var(--sp-4); }
 }

@@ -95,20 +95,23 @@
 .input-mono { font-family: var(--font-mono); font-size: var(--fs-md); }
 
 /* Search field with a leading glyph, as every explorer has. */
+/* Compact by design: it sits at the end of the top bar beside the officer's
+   name, not across a row of its own, and an address is pasted rather than
+   read back - so the field needs to accept 42 characters, not display them. */
 .search {
   position: relative;
   display: flex;
   align-items: center;
-  flex: 1 1 auto;
-  max-width: 640px;
+  flex: 0 1 260px;
+  min-width: 150px;
 }
 .search .glyph {
-  position: absolute; left: 11px;
+  position: absolute; left: 10px;
   color: var(--text-subtle);
   font-size: 15px;
   pointer-events: none;
 }
-.search .input { padding-left: 32px; padding-right: 56px; }
+.search .input { padding-left: 30px; padding-right: 34px; padding-block: 5px; }
 .search kbd {
   position: absolute; right: 9px;
   font-family: var(--font-sans);

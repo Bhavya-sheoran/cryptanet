@@ -1,8 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import useTheme from './components/ui/useTheme.js';
-import {
-  applyRailWidth, currentRailWidth, RAIL_DEFAULT, RAIL_WIDTH_KEY,
-} from './components/ui/railWidth.js';
 import { Toaster } from './components/ui/Toaster.jsx';
 import Investigate from './pages/Investigate.jsx';
 import CasesPage from './pages/CasesPage.jsx';
@@ -36,79 +33,15 @@ function officerName(fullName) {
 /**
  * Application shell.
  *
- * A left rail rather than one long scrolling page: an investigator moves
- * between a live trace, the case list, the alert queue and the exchange
- * ranking, and those are destinations, not sections of a document.
+ * One top bar rather than a left rail: an investigator moves between a live
+ * trace, the case list, the alert queue and the exchange ranking, and those
+ * are destinations, not sections of a document. Across the top they cost no
+ * horizontal space, which the money-flow diagram uses.
  *
  * The provenance banner is driven by the backend's own `data_source`, never a
  * constant here, so the UI claim about where the data came from cannot drift
  * from how the system is actually configured.
  */
-/**
- * Drag handle on the edge of the navigation panel.
- *
- * The whole layout is a grid sized by --rail-w, so dragging only has to write
- * that one variable. The chosen width is kept per browser: an officer who
- * widens the panel should not have to do it again tomorrow. Arrow keys move it
- * too, and a double-click restores the default - a mouse-only control would be
- * unusable for anyone working by keyboard.
- */
-function RailResizer() {
-  useEffect(() => {
-    try {
-      const saved = Number(window.localStorage.getItem(RAIL_WIDTH_KEY));
-      if (saved) applyRailWidth(saved);
-    } catch {
-      // Private browsing can refuse storage; the default width is fine.
-    }
-  }, []);
-
-  const remember = (px) => {
-    const width = applyRailWidth(px);
-    try {
-      window.localStorage.setItem(RAIL_WIDTH_KEY, String(width));
-    } catch {
-      // Not worth telling anyone: the panel still resized.
-    }
-  };
-
-  const onPointerDown = (event) => {
-    event.preventDefault();
-    const onMove = (e) => remember(e.clientX);
-    const onUp = () => {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-      document.body.classList.remove('is-resizing-rail');
-    };
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-    document.body.classList.add('is-resizing-rail');
-  };
-
-  const onKeyDown = (event) => {
-    const step = event.shiftKey ? 32 : 8;
-    const current = currentRailWidth();
-    if (event.key === 'ArrowLeft') remember(current - step);
-    else if (event.key === 'ArrowRight') remember(current + step);
-    else if (event.key === 'Home') remember(RAIL_DEFAULT);
-    else return;
-    event.preventDefault();
-  };
-
-  return (
-    <div
-      className="rail-resizer"
-      role="separator"
-      aria-orientation="vertical"
-      aria-label="Resize the navigation panel"
-      tabIndex={0}
-      onPointerDown={onPointerDown}
-      onKeyDown={onKeyDown}
-      onDoubleClick={() => remember(RAIL_DEFAULT)}
-    />
-  );
-}
-
 /** Candidate logo files, in order of preference. Drop one into
  *  frontend/public/ and it appears here - no code change. SVG first: it stays
  *  sharp on any screen. */
@@ -239,8 +172,7 @@ export default function App() {
   return (
     <Toaster>
       <div className="app">
-        <aside className="rail">
-          <RailResizer />
+        <header className="navbar">
           <div className="brand">
             <BrandMark />
             <div className="brand-text">
@@ -248,12 +180,12 @@ export default function App() {
             </div>
           </div>
 
-          <nav className="rail-nav" aria-label="Sections">
+          <nav className="navbar-nav" aria-label="Sections">
             {NAV.map((item) => (
               <button
                 key={item.id}
                 type="button"
-                className="rail-item"
+                className="nav-item"
                 aria-current={view === item.id && !openCaseId ? 'page' : undefined}
                 onClick={() => { setOpenCaseId(null); setView(item.id); }}
               >
@@ -266,47 +198,56 @@ export default function App() {
             ))}
           </nav>
 
-          <div className="rail-foot">
-            <button type="button" className="rail-item" onClick={() => setShowStatus((s) => !s)}>
+          {/* Everything from here sits at the right end of the bar. */}
+          <form className="search" onSubmit={runSearch} role="search">
+            <span className="glyph" aria-hidden="true">⌕</span>
+            <input
+              ref={searchRef}
+              className="input input-mono"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search a wallet address"
+              aria-label="Search a wallet address"
+              spellCheck="false"
+              autoComplete="off"
+            />
+            <kbd>/</kbd>
+          </form>
+
+          <div className="navbar-tools">
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={() => setShowStatus((s) => !s)}
+              title="System status"
+              aria-label="System status"
+            >
               <span className="glyph" aria-hidden="true">◍</span>
-              System status
             </button>
-            <button type="button" className="rail-item" onClick={toggle}>
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={toggle}
+              title={theme === 'dark' ? 'Light theme' : 'Dark theme'}
+              aria-label={theme === 'dark' ? 'Light theme' : 'Dark theme'}
+            >
               <span className="glyph" aria-hidden="true">{theme === 'dark' ? '☀' : '☾'}</span>
-              {theme === 'dark' ? 'Light theme' : 'Dark theme'}
             </button>
           </div>
-        </aside>
+
+          {user ? (
+            <span className="row sm nowrap signed-in-as">
+              {officerName(user.full_name)}
+              <span className={`badge badge-${user.can_approve ? 'ok' : 'neutral'}`}>
+                {user.role}
+              </span>
+            </span>
+          ) : (
+            <span className="badge badge-neutral">Not signed in</span>
+          )}
+        </header>
 
         <div className="main">
-          <header className="topbar">
-            <form className="search" onSubmit={runSearch} role="search">
-              <span className="glyph" aria-hidden="true">⌕</span>
-              <input
-                ref={searchRef}
-                className="input input-mono"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search a wallet address — BTC, Ethereum-style 0x, or Tron T…"
-                aria-label="Search a wallet address"
-                spellCheck="false"
-                autoComplete="off"
-              />
-              <kbd>/</kbd>
-            </form>
-
-            {user ? (
-              <span className="row sm nowrap signed-in-as topbar-user">
-                {officerName(user.full_name)}
-                <span className={`badge badge-${user.can_approve ? 'ok' : 'neutral'}`}>
-                  {user.role}
-                </span>
-              </span>
-            ) : (
-              <span className="badge badge-neutral topbar-user">Not signed in</span>
-            )}
-          </header>
-
           <main className="content">
             {error ? (
               <div className="callout callout-danger">

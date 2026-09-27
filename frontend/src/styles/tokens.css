@@ -68,12 +68,9 @@
   --bg-elevated: var(--n-0);
   --bg-sunken:   var(--n-100);
   --bg-inset:    var(--n-25);
-  /* Rail and top bar share one light-blue surface, so the navigation reads as
-     a single continuous frame and the workspace column beside it is plainly
-     the content area. Keep these two equal - splitting them puts a seam at
-     the corner where the bar meets the rail. */
+  /* The navigation bar's light-blue surface, which marks it off from the
+     white workspace below it. */
   --surface-nav: var(--brand-100);
-  --surface-rail:var(--brand-100);
 
   --border:        var(--n-200);
   --border-strong: var(--n-300);
@@ -137,7 +134,6 @@
   --shadow-lg: 0 12px 32px rgba(16, 22, 30, 0.14);
 
   /* --- layout ------------------------------------------------------------ */
-  --rail-w: 212px;
   --nav-h: 56px;
   --content-max: 1400px;
 
@@ -157,9 +153,8 @@
   --bg-sunken:   #101318;
   --bg-inset:    #0e1116;
   /* Same idea in dark mode: a blue-leaning surface, not a blue panel -
-     a pale blue here would glare. Both navigation surfaces stay equal. */
+     a pale blue here would glare. */
   --surface-nav: #141b28;
-  --surface-rail:#141b28;
 
   --border:        #262b33;
   --border-strong: #343a44;
